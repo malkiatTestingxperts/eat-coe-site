@@ -1,0 +1,160 @@
+[
+  {
+    "id": "seed-1.1",
+    "name": "Unified Test Strategy & SOPs for ERP.docx",
+    "storyCode": "1.1",
+    "pillarCode": "01",
+    "pillar": "Standards & Best Practices",
+    "uploadedBy": "QA Manager",
+    "uploadDate": "2026-02-10",
+    "lastModifiedBy": "QA Manager",
+    "lastModifiedDate": "2026-03-18",
+    "tags": [
+      "strategy",
+      "sop",
+      "compliance",
+      "rtm"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 58,
+    "location": "SharePoint · DigitalBanking",
+    "featured": true
+  },
+  {
+    "id": "seed-1.3",
+    "name": "ERP Quality Metrics & KPIs.docx",
+    "storyCode": "1.3",
+    "pillarCode": "01",
+    "pillar": "Standards & Best Practices",
+    "uploadedBy": "QA Manager",
+    "uploadDate": "2026-01-22",
+    "lastModifiedBy": "QA Manager",
+    "lastModifiedDate": "2026-01-22",
+    "tags": [
+      "kpi",
+      "metrics",
+      "dashboard"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 41,
+    "location": "SharePoint · DigitalBanking",
+    "featured": false
+  },
+  {
+    "id": "seed-1.4",
+    "name": "Monitoring & Governance Framework for ERP.docx",
+    "storyCode": "1.4",
+    "pillarCode": "01",
+    "pillar": "Standards & Best Practices",
+    "uploadedBy": "COE Lead",
+    "uploadDate": "2025-12-05",
+    "lastModifiedBy": "COE Lead",
+    "lastModifiedDate": "2026-04-02",
+    "tags": [
+      "governance",
+      "monitoring",
+      "escalation"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 33,
+    "location": "SharePoint · DigitalBanking",
+    "featured": false
+  },
+  {
+    "id": "seed-1.5",
+    "name": "Versioning and Change Control Process for ERP.docx",
+    "storyCode": "1.5",
+    "pillarCode": "01",
+    "pillar": "Standards & Best Practices",
+    "uploadedBy": "COE Lead",
+    "uploadDate": "2025-11-14",
+    "lastModifiedBy": "COE Lead",
+    "lastModifiedDate": "2025-11-14",
+    "tags": [
+      "versioning",
+      "change control"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 19,
+    "location": "SharePoint · DigitalBanking",
+    "featured": false
+  },
+  {
+    "id": "seed-3.5",
+    "name": "Continuous Improvement Framework for ERP.docx",
+    "storyCode": "3.5",
+    "pillarCode": "03",
+    "pillar": "Monitoring & Continuous Improvement",
+    "uploadedBy": "COE Lead",
+    "uploadDate": "2026-03-01",
+    "lastModifiedBy": "COE Lead",
+    "lastModifiedDate": "2026-05-11",
+    "tags": [
+      "continuous improvement",
+      "action log"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 47,
+    "location": "SharePoint · DigitalBanking",
+    "featured": false
+  },
+  {
+    "id": "seed-3.6",
+    "name": "Defect Trend Analysis and Reporting Framework for ERP Testing.docx",
+    "storyCode": "3.6",
+    "pillarCode": "03",
+    "pillar": "Monitoring & Continuous Improvement",
+    "uploadedBy": "QA Lead",
+    "uploadDate": "2026-04-19",
+    "lastModifiedBy": "QA Lead",
+    "lastModifiedDate": "2026-06-30",
+    "tags": [
+      "defects",
+      "trend analysis",
+      "rca"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 62,
+    "location": "SharePoint · DigitalBanking",
+    "featured": true
+  },
+  {
+    "id": "seed-4.4",
+    "name": "Knowledge Management Framework for ERP Testing.docx",
+    "storyCode": "4.4",
+    "pillarCode": "04",
+    "pillar": "Capability Building & Enablement",
+    "uploadedBy": "COE Lead",
+    "uploadDate": "2025-10-08",
+    "lastModifiedBy": "COE Lead",
+    "lastModifiedDate": "2026-02-14",
+    "tags": [
+      "knowledge management",
+      "repository"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 29,
+    "location": "SharePoint · DigitalBanking",
+    "featured": true
+  },
+  {
+    "id": "seed-4.5",
+    "name": "Business & Domain Knowledge Framework for ERP.docx",
+    "storyCode": "4.5",
+    "pillarCode": "04",
+    "pillar": "Capability Building & Enablement",
+    "uploadedBy": "COE Member",
+    "uploadDate": "2026-05-27",
+    "lastModifiedBy": "COE Member",
+    "lastModifiedDate": "2026-07-05",
+    "tags": [
+      "business knowledge",
+      "domain knowledge",
+      "sme"
+    ],
+    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "downloads": 22,
+    "location": "SharePoint · DigitalBanking",
+    "featured": false
+  }
+]
