@@ -2079,3 +2079,28 @@ body.role-contributor .viewer-only {
   align-items: flex-start;
   /* Align top edges */
 }
+
+.tech-logos {
+  display: flex;
+  flex-direction: row;
+  gap: -19px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+}
+
+.tech-card {
+  width: 130px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+}
+
+.tech-card img {
+  max-height: 66px;
+  max-width: 359px;
+  object-fit: contain;
+}

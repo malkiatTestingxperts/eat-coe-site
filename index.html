@@ -1,63 +1,70 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About EAT · EAT COE</title>
-<link rel="stylesheet" href="assets/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About EAT · EAT COE</title>
+  <link rel="stylesheet" href="assets/style.css">
 
 </head>
+
 <body>
-<header class="site-header">
+  <header class="site-header">
     <a class="logo" href="index.html">
       <img src="assets/logo.png" alt="EAT COE logo">
       <span class="lt"><b>EAT COE</b><span>ERP / CRM Testing Repository</span></span>
     </a>
     <button class="nav-toggle" onclick="document.querySelector('.site-nav').classList.toggle('open')">&#9776;</button>
     <nav class="site-nav">
-        <a class="nav-flat active" href="index.html">Home</a>
-        <div class="nav-item">
-          <a class="" href="about.html">About <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      <a class="nav-flat active" href="index.html">Home</a>
+      <div class="nav-item">
+        <a class="" href="about.html">About <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="about.html">About EAT</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="" href="index.html#pillars">Pillars <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="" href="index.html#pillars">Pillars <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="01-standards.html">01 · Standards & Best Practices</a>
           <a href="02-tools.html">02 · Tools & Technology</a>
           <a href="03-monitoring.html">03 · Monitoring & Continuous Improvement</a>
           <a href="04-capability.html">04 · Capability Building & Enablement</a>
           <a href="05-innovation.html">05 · Innovation</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="" href="documents.html">Documents <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="" href="documents.html">Documents <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="documents.html">All Documents</a>
           <a href="documents.html#register">Register a Document</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="" href="dashboard.html">Dashboard <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="" href="dashboard.html">Dashboard <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="dashboard.html">Readiness Dashboard</a>
           <a href="sitemap.html">Full Sitemap</a>
-          </div>
         </div>
-        <div class="role-switcher">
-          <div id="authBox"></div>
-        </div>
+      </div>
+      <div class="role-switcher">
+        <div id="authBox"></div>
+      </div>
     </nav>
   </header>
   <section class="hero">
     <span class="eyebrow">Center of Excellence</span>
     <h1>Welcome to the EAT Center of Excellence</h1>
-    <p class="tagline">Find standards, tools, monitoring practices, capability programs, innovation pilots and their linked SharePoint documents — all in one place.</p>
+    <p class="tagline">Find standards, tools, monitoring practices, capability programs, innovation pilots and their
+      linked SharePoint documents — all in one place.</p>
     <div class="hero-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="searchInput" type="text" placeholder="Search deliverables, documents, owners, keywords…" autocomplete="off">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input id="searchInput" type="text" placeholder="Search deliverables, documents, owners, keywords…"
+        autocomplete="off">
     </div>
     <div class="filters">
       <h3>Filter by pillar</h3>
@@ -70,98 +77,126 @@
         <button onclick="filterPillar('05', this)">05 · Innovation</button>
       </div>
     </div>
+    <div class="tech-landscape">
+
+      <div class="tech-logos">
+        <div class="tech-card"><img src="assets/Sap.png" alt=" Platform"></div>
+        <div class="tech-card"><img src="assets/D365.png" alt="D365"></div>
+        <div class="tech-card"><img src="assets/Salesforce.png" alt="Salesforce"></div>
+      </div>
+
+    </div>
     <div id="heroResults"></div>
   </section>
-  <main class="page-content"><div class="wrap">
+  <main class="page-content">
+    <div class="wrap">
 
-  <p class="prose" style="max-width:820px">EAT is the Center of Excellence that turns every ERP/CRM testing engagement's hard-won learning into a reusable, governed asset. Read the full story on the <a href="about.html" style="color:var(--teal-dark)">About page</a>.</p>
+      <p class="prose" style="max-width:820px">EAT is the Center of Excellence that turns every ERP/CRM testing
+        engagement's hard-won learning into a reusable, governed asset. Read the full story on the <a href="about.html"
+          style="color:var(--teal-dark)">About page</a>.</p>
 
-  <div class="section-title">Quick Links</div>
-  <div class="quick-links" id="quickLinks"><div class="ql-empty">Loading…</div></div>
+      <div class="section-title">Quick Links</div>
+      <div class="quick-links" id="quickLinks">
+        <div class="ql-empty">Loading…</div>
+      </div>
 
-  <div class="section-title" id="pillars">The five pillars</div>
-  <div class="grid cols-5">
-  <a class="card pillar-card" href="01-standards.html">
-    <div class="num">01</div>
-    <h3>Standards & Best Practices</h3>
-    <p>The rulebook every ERP/CRM testing project inherits on day one.</p>
-  </a>
-  <a class="card pillar-card" href="02-tools.html">
-    <div class="num">02</div>
-    <h3>Tools & Technology</h3>
-    <p>How the COE chooses, documents and wires up the tools testers actually use.</p>
-  </a>
-  <a class="card pillar-card" href="03-monitoring.html">
-    <div class="num">03</div>
-    <h3>Monitoring & Continuous Improvement</h3>
-    <p>The feedback loop that keeps the COE's practices honest and current.</p>
-  </a>
-  <a class="card pillar-card" href="04-capability.html">
-    <div class="num">04</div>
-    <h3>Capability Building & Enablement</h3>
-    <p>Growing the people, knowledge and domain depth behind every engagement.</p>
-  </a>
-  <a class="card pillar-card" href="05-innovation.html">
-    <div class="num">05</div>
-    <h3>Innovation</h3>
-    <p>Where the COE tests AI on itself before it reaches a project.</p>
-  </a></div>
+      <div class="section-title" id="pillars">The five pillars</div>
+      <div class="grid cols-5">
+        <a class="card pillar-card" href="01-standards.html">
+          <div class="num">01</div>
+          <h3>Standards & Best Practices</h3>
+          <p>The rulebook every ERP/CRM testing project inherits on day one.</p>
+        </a>
+        <a class="card pillar-card" href="02-tools.html">
+          <div class="num">02</div>
+          <h3>Tools & Technology</h3>
+          <p>How the COE chooses, documents and wires up the tools testers actually use.</p>
+        </a>
+        <a class="card pillar-card" href="03-monitoring.html">
+          <div class="num">03</div>
+          <h3>Monitoring & Continuous Improvement</h3>
+          <p>The feedback loop that keeps the COE's practices honest and current.</p>
+        </a>
+        <a class="card pillar-card" href="04-capability.html">
+          <div class="num">04</div>
+          <h3>Capability Building & Enablement</h3>
+          <p>Growing the people, knowledge and domain depth behind every engagement.</p>
+        </a>
+        <a class="card pillar-card" href="05-innovation.html">
+          <div class="num">05</div>
+          <h3>Innovation</h3>
+          <p>Where the COE tests AI on itself before it reaches a project.</p>
+        </a>
+      </div>
 
-  </div></main>
-  <footer class="site-footer">Enterprise Application Testing (EAT) Center of Excellence — internal repository &middot; Documents live in <b>SharePoint / Teams</b>, not in this site.</footer>
-<div id="signinGate">
-  <div class="signin-gate-card">
-    <h3>Sign-in required</h3>
-    <p>This COE repository is restricted to your organization. Sign in with your Microsoft work account to continue.</p>
-    <button class="signin-btn" onclick="signIn()">
-      <svg viewBox="0 0 23 23"><rect width="10" height="10" x="1" y="1" fill="#f25022"/><rect width="10" height="10" x="12" y="1" fill="#7fba00"/><rect width="10" height="10" x="1" y="12" fill="#00a4ef"/><rect width="10" height="10" x="12" y="12" fill="#ffb900"/></svg>
-      Sign in with Microsoft
-    </button>
-  </div>
-</div>
-<div id="about-overlay" onclick="toggleAbout()"></div>
-<div id="about-modal">
-  <div id="about-header">About EAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
-  <div id="about-body">
-    <p><strong>EAT</strong> is <strong>Enterprise Application Testing</strong>, the Center of Excellence behind every ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for details.</p>
-  </div>
-</div>
-
-<!-- ============================= -->
-<!-- AI Knowledge Assistant -->
-<!-- ============================= -->
-<div id="chatbot-button" onclick="toggleChatbot()"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="4" y="8" width="16" height="12" rx="3"/>
-  <circle cx="9" cy="14" r="1.1" fill="white" stroke="none"/>
-  <circle cx="15" cy="14" r="1.1" fill="white" stroke="none"/>
-  <path d="M9 17.3h6"/>
-  <path d="M12 8V5"/>
-  <circle cx="12" cy="3.4" r="1.2" fill="white" stroke="none"/>
-  <path d="M2 12h2M20 12h2"/>
-</svg></div>
-<div id="chatbot-window">
-  <div id="chat-header">
-    <span>EAT Knowledge Assistant</span>
-    <span class="close" onclick="toggleChatbot()">&times;</span>
-  </div>
-  <div id="chat-body">
-    <div class="bot-message">
-      <strong>👋 Welcome!</strong><br><br>
-      I can search both COE deliverables and linked documents.
-      Ask me things like:<br><br>
-      • Show me deliverable 3.6<br>
-      • What's done in Standards?<br>
-      • Automation framework
+    </div>
+  </main>
+  <footer class="site-footer">Enterprise Application Testing (EAT) Center of Excellence — internal repository &middot;
+    Documents live in <b>SharePoint / Teams</b>, not in this site.</footer>
+  <div id="signinGate">
+    <div class="signin-gate-card">
+      <h3>Sign-in required</h3>
+      <p>This COE repository is restricted to your organization. Sign in with your Microsoft work account to continue.
+      </p>
+      <button class="signin-btn" onclick="signIn()">
+        <svg viewBox="0 0 23 23">
+          <rect width="10" height="10" x="1" y="1" fill="#f25022" />
+          <rect width="10" height="10" x="12" y="1" fill="#7fba00" />
+          <rect width="10" height="10" x="1" y="12" fill="#00a4ef" />
+          <rect width="10" height="10" x="12" y="12" fill="#ffb900" />
+        </svg>
+        Sign in with Microsoft
+      </button>
     </div>
   </div>
-  <div id="chat-footer">
-    <input id="chat-input" type="text" placeholder="Ask about the COE repository…" onkeypress="if(event.key==='Enter'){sendMessage();}">
-    <button onclick="sendMessage()">Send</button>
+  <div id="about-overlay" onclick="toggleAbout()"></div>
+  <div id="about-modal">
+    <div id="about-header">About EAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
+    <div id="about-body">
+      <p><strong>EAT</strong> is <strong>Enterprise Application Testing</strong>, the Center of Excellence behind every
+        ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for
+        details.</p>
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="js/site.js"></script>
-<script src="js/auth.js"></script>
+  <!-- ============================= -->
+  <!-- AI Knowledge Assistant -->
+  <!-- ============================= -->
+  <div id="chatbot-button" onclick="toggleChatbot()"><svg viewBox="0 0 24 24" fill="none" stroke="white"
+      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="8" width="16" height="12" rx="3" />
+      <circle cx="9" cy="14" r="1.1" fill="white" stroke="none" />
+      <circle cx="15" cy="14" r="1.1" fill="white" stroke="none" />
+      <path d="M9 17.3h6" />
+      <path d="M12 8V5" />
+      <circle cx="12" cy="3.4" r="1.2" fill="white" stroke="none" />
+      <path d="M2 12h2M20 12h2" />
+    </svg></div>
+  <div id="chatbot-window">
+    <div id="chat-header">
+      <span>EAT Knowledge Assistant</span>
+      <span class="close" onclick="toggleChatbot()">&times;</span>
+    </div>
+    <div id="chat-body">
+      <div class="bot-message">
+        <strong>👋 Welcome!</strong><br><br>
+        I can search both COE deliverables and linked documents.
+        Ask me things like:<br><br>
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
+      </div>
+    </div>
+    <div id="chat-footer">
+      <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
+        onkeypress="if(event.key==='Enter'){sendMessage();}">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/auth.js"></script>
 </body>
+
 </html>
