@@ -913,7 +913,7 @@ function getDocsForStory(code) {
  * real, but the mailto fallback is still worth keeping for anyone without
  * SharePoint access.
  */
-const COE_INTAKE_EMAIL = "eat-coe-submissions@txplin.com"; // TODO: replace with your real intake mailbox
+const COE_INTAKE_EMAIL = "malkiat.singh@testingxperts.com"; // TODO: replace with your real intake mailbox
 
 const PILLAR_FOLDERS = {
   "01": "docs/01-standards",
@@ -950,8 +950,8 @@ function buildEmail() {
   const file = fileInput.files[0];
   const folder = suggestedFolder(pillar, story);
 
-  const subject = "COE Document Submission: " + name;
-  let body = "New document submission for the EAT COE repository.\n\n";
+  const subject = "TREAT Document Submission: " + name;
+  let body = "New document submission for the TREAT COE repository.\n\n";
   body += "Document name: " + name + "\n";
   body += "Submitted by: " + contributor + (contributorEmail ? " (" + contributorEmail + ")" : "") + "\n";
   body += "Pillar: " + (PILLAR_NAMES[pillar] || "Not specified") + "\n";
@@ -1023,8 +1023,8 @@ function initRegisterForm() {
     const file = fileInput.files[0];
     const folder = suggestedFolder(pillar, story);
 
-    const subject = "COE Document Submission: " + name;
-    let body = "New document submission for the EAT COE repository.\n\n";
+    const subject = "TREAT COE Document Submission: " + name;
+    let body = "New document submission for the TREAT COE repository.\n\n";
     body += "Document name: " + name + "\n";
     body += "Submitted by: " + contributor + (contributorEmail ? " (" + contributorEmail + ")" : "") + "\n";
     body += "Pillar: " + (PILLAR_NAMES[pillar] || "Not specified") + "\n";

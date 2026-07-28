@@ -1,54 +1,56 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Standards &amp; Best Practices · EAT COE</title>
-<link rel="stylesheet" href="assets/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Standards &amp; Best Practices · EAT COE</title>
+  <link rel="stylesheet" href="assets/style.css">
 
 </head>
+
 <body>
-<header class="site-header">
+  <header class="site-header">
     <a class="logo" href="index.html">
-      <img src="assets/logo.png" alt="EAT COE logo">
-      <span class="lt"><b>EAT COE</b><span>ERP / CRM Testing Repository</span></span>
+      <img src="assets/treat.png" alt="TREAT logo">
+      <span class="lt"><i>Tx’s Repository For Enterprise Applications Testing</i></span>
     </a>
     <button class="nav-toggle" onclick="document.querySelector('.site-nav').classList.toggle('open')">&#9776;</button>
     <nav class="site-nav">
-        <a class="nav-flat" href="index.html">Home</a>
-        <div class="nav-item">
-          <a class="" href="about.html">About <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      <a class="nav-flat" href="index.html">Home</a>
+      <div class="nav-item">
+        <a class="" href="about.html">About <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="about.html">About EAT</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="active" href="index.html#pillars">Pillars <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="active" href="index.html#pillars">Pillars <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="01-standards.html">01 · Standards & Best Practices</a>
           <a href="02-tools.html">02 · Tools & Technology</a>
           <a href="03-monitoring.html">03 · Monitoring & Continuous Improvement</a>
           <a href="04-capability.html">04 · Capability Building & Enablement</a>
           <a href="05-innovation.html">05 · Innovation</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="" href="documents.html">Documents <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="" href="documents.html">Documents <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="documents.html">All Documents</a>
           <a href="documents.html#register">Register a Document</a>
-          </div>
         </div>
-        <div class="nav-item">
-          <a class="" href="dashboard.html">Dashboard <span class="caret">▾</span></a>
-          <div class="nav-dropdown">
+      </div>
+      <div class="nav-item">
+        <a class="" href="dashboard.html">Dashboard <span class="caret">▾</span></a>
+        <div class="nav-dropdown">
           <a href="dashboard.html">Readiness Dashboard</a>
           <a href="sitemap.html">Full Sitemap</a>
-          </div>
         </div>
-        <div class="role-switcher">
-          <div id="authBox"></div>
-        </div>
+      </div>
+      <div class="role-switcher">
+        <div id="authBox"></div>
+      </div>
     </nav>
   </header>
   <section class="hero hero-sm">
@@ -56,215 +58,269 @@
     <h1>Standards &amp; Best Practices</h1>
     <p class="tagline">The rulebook every ERP/CRM testing project inherits on day one.</p>
   </section>
-  <main class="page-content"><div class="wrap">
-<div class="role-banner viewer-only">
-      <span>You're browsing as a <b>Viewer</b> (read-only). <b>Log In</b> in the top-right with your Microsoft account to upload documents, edit tags, or update story status.</span>
+  <main class="page-content">
+    <div class="wrap">
+      <div class="role-banner viewer-only">
+        <span>You're browsing as a <b>Viewer</b> (read-only). <b>Log In</b> in the top-right with your Microsoft account
+          to upload documents, edit tags, or update story status.</span>
+      </div>
+      <div class="role-banner contributor-only">
+        <span>You're signed in as a <b>Contributor</b>. You can upload documents, edit tags, and update story status.
+          This is granted simply by signing in for now — it isn't yet tied to your real SharePoint permissions.</span>
+      </div>
+      <div class="prose">
+        <p>Defines the common test strategy, automation architecture, quality KPIs, governance cadence, change-control
+          process and test-data standards that every engagement plugs into instead of reinventing.</p>
+      </div>
+
+      <div class="section-title">Deliverables (01.1 – 01.6)</div>
+      <div class="area" id="1.1">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.1</span>
+            <div>
+              <h3>Define Test Strategy, Compliance &amp; SOPs</h3>
+              <div class="area-owner">Owner: QA Lead / Manager</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">A comprehensive, standardized ERP testing methodology, supported by process documents,
+          guidelines and review workflows, so project teams follow one consistent, compliant approach.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">Unified test strategy &amp; SOPs, plus the RAT/RTM template set.</p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Standards document reviewed and signed-off</li>
+              <li>SOPs published for test planning, execution, reporting</li>
+              <li>Available on central knowledge base</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.1"></div>
+      </div>
+      <div class="area" id="1.2">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.2</span>
+            <div>
+              <h3>Reusable Automation Framework with CI/CD</h3>
+              <div class="area-owner">Owner: Automation Architect</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">A tool-agnostic, modular automation architecture with reusable libraries and onboarding guides
+          so teams can accelerate automation consistently.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">Automation framework architecture, reusable function library, data-driven
+              test design guide.</p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Framework is tool-agnostic and modular</li>
+              <li>Includes reusable functions, data-driven testing</li>
+              <li>Demo completed and approved by COE</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.2"></div>
+      </div>
+      <div class="area" id="1.3">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.3</span>
+            <div>
+              <h3>Quality Metrics &amp; KPIs</h3>
+              <div class="area-owner">Owner: QA Manager</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">ERP-specific testing KPIs with target thresholds and dashboards so quality and efficiency are
+          measurable across projects.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">KPI catalog (e.g. DRE, cycle time) and dashboard specification.</p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>KPI catalog created and published</li>
+              <li>Dashboards implemented using project tools</li>
+              <li>Metrics adoption piloted and feedback captured</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.3"></div>
+      </div>
+      <div class="area" id="1.4">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.4</span>
+            <div>
+              <h3>Monitoring &amp; Governance Framework</h3>
+              <div class="area-owner">Owner: COE Lead</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">A standardized test governance playbook covering roles, cadences, reviews and escalation paths
+          so governance is predictable across ERP programs.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">Governance playbook, review calendar, escalation matrix, governance audit
+              checklist.</p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Governance playbook approved by stakeholders</li>
+              <li>Review calendar and roles adopted across projects</li>
+              <li>Escalation matrix communicated</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.4"></div>
+      </div>
+      <div class="area" id="1.5">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.5</span>
+            <div>
+              <h3>Versioning &amp; Change Control Process</h3>
+              <div class="area-owner">Owner: COE Lead</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">A test-asset versioning and change-control process so updates to test artifacts are tracked and
+          auditable.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">Versioning approach, change log template, adoption training.</p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>Version control approach defined (naming, branching)</li>
+              <li>Change log template created and used across repositories</li>
+              <li>Training provided on process adherence</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.5"></div>
+      </div>
+      <div class="area" id="1.6">
+        <div class="area-head">
+          <div class="area-title">
+            <span class="area-code">1.6</span>
+            <div>
+              <h3>Test Data Management Standards</h3>
+              <div class="area-owner">Owner: ETL Lead</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="story">Standardized approaches to test data creation and maintenance so test cases remain reliable and
+          repeatable.</p>
+        <div class="area-meta">
+          <div>
+            <h4>Deliverable</h4>
+            <p style="font-size:13px;margin:0">TDM strategy per ERP module, TDM SOP, anonymization/masking guidelines.
+            </p>
+          </div>
+          <div>
+            <h4>Acceptance criteria</h4>
+            <ul>
+              <li>TDM strategy defined for different ERP modules</li>
+              <li>TDM SOP created</li>
+              <li>Anonymization/masking guidelines documented</li>
+            </ul>
+          </div>
+        </div>
+        <div class="docs-list" data-story-docs="1.6"></div>
+      </div>
     </div>
-    <div class="role-banner contributor-only">
-      <span>You're signed in as a <b>Contributor</b>. You can upload documents, edit tags, and update story status. This is granted simply by signing in for now — it isn't yet tied to your real SharePoint permissions.</span>
-    </div>
-<div class="prose"><p>Defines the common test strategy, automation architecture, quality KPIs, governance cadence, change-control process and test-data standards that every engagement plugs into instead of reinventing.</p></div>
-
-<div class="section-title">Deliverables (01.1 – 01.6)</div>
-<div class="area" id="1.1">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.1</span>
-<div>
-<h3>Define Test Strategy, Compliance &amp; SOPs</h3>
-<div class="area-owner">Owner: QA Lead / Manager</div>
-</div>
-</div>
-
-</div>
-<p class="story">A comprehensive, standardized ERP testing methodology, supported by process documents, guidelines and review workflows, so project teams follow one consistent, compliant approach.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">Unified test strategy &amp; SOPs, plus the RAT/RTM template set.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>Standards document reviewed and signed-off</li><li>SOPs published for test planning, execution, reporting</li><li>Available on central knowledge base</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.1"></div>
-</div>
-<div class="area" id="1.2">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.2</span>
-<div>
-<h3>Reusable Automation Framework with CI/CD</h3>
-<div class="area-owner">Owner: Automation Architect</div>
-</div>
-</div>
-
-</div>
-<p class="story">A tool-agnostic, modular automation architecture with reusable libraries and onboarding guides so teams can accelerate automation consistently.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">Automation framework architecture, reusable function library, data-driven test design guide.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>Framework is tool-agnostic and modular</li><li>Includes reusable functions, data-driven testing</li><li>Demo completed and approved by COE</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.2"></div>
-</div>
-<div class="area" id="1.3">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.3</span>
-<div>
-<h3>Quality Metrics &amp; KPIs</h3>
-<div class="area-owner">Owner: QA Manager</div>
-</div>
-</div>
-
-</div>
-<p class="story">ERP-specific testing KPIs with target thresholds and dashboards so quality and efficiency are measurable across projects.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">KPI catalog (e.g. DRE, cycle time) and dashboard specification.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>KPI catalog created and published</li><li>Dashboards implemented using project tools</li><li>Metrics adoption piloted and feedback captured</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.3"></div>
-</div>
-<div class="area" id="1.4">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.4</span>
-<div>
-<h3>Monitoring &amp; Governance Framework</h3>
-<div class="area-owner">Owner: COE Lead</div>
-</div>
-</div>
-
-</div>
-<p class="story">A standardized test governance playbook covering roles, cadences, reviews and escalation paths so governance is predictable across ERP programs.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">Governance playbook, review calendar, escalation matrix, governance audit checklist.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>Governance playbook approved by stakeholders</li><li>Review calendar and roles adopted across projects</li><li>Escalation matrix communicated</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.4"></div>
-</div>
-<div class="area" id="1.5">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.5</span>
-<div>
-<h3>Versioning &amp; Change Control Process</h3>
-<div class="area-owner">Owner: COE Lead</div>
-</div>
-</div>
-
-</div>
-<p class="story">A test-asset versioning and change-control process so updates to test artifacts are tracked and auditable.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">Versioning approach, change log template, adoption training.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>Version control approach defined (naming, branching)</li><li>Change log template created and used across repositories</li><li>Training provided on process adherence</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.5"></div>
-</div>
-<div class="area" id="1.6">
-<div class="area-head">
-<div class="area-title">
-<span class="area-code">1.6</span>
-<div>
-<h3>Test Data Management Standards</h3>
-<div class="area-owner">Owner: ETL Lead</div>
-</div>
-</div>
-
-</div>
-<p class="story">Standardized approaches to test data creation and maintenance so test cases remain reliable and repeatable.</p>
-<div class="area-meta">
-<div>
-<h4>Deliverable</h4>
-<p style="font-size:13px;margin:0">TDM strategy per ERP module, TDM SOP, anonymization/masking guidelines.</p>
-</div>
-<div>
-<h4>Acceptance criteria</h4>
-<ul><li>TDM strategy defined for different ERP modules</li><li>TDM SOP created</li><li>Anonymization/masking guidelines documented</li></ul>
-</div>
-</div>
-<div class="docs-list" data-story-docs="1.6"></div>
-</div>
-  </div></main>
-  <footer class="site-footer">Enterprise Application Testing (EAT) Center of Excellence — internal repository &middot; Documents live in <b>SharePoint / Teams</b>, not in this site.</footer>
-<div id="signinGate">
-  <div class="signin-gate-card">
-    <h3>Sign-in required</h3>
-    <p>This COE repository is restricted to your organization. Sign in with your Microsoft work account to continue.</p>
-    <button class="signin-btn" onclick="signIn()">
-      <svg viewBox="0 0 23 23"><rect width="10" height="10" x="1" y="1" fill="#f25022"/><rect width="10" height="10" x="12" y="1" fill="#7fba00"/><rect width="10" height="10" x="1" y="12" fill="#00a4ef"/><rect width="10" height="10" x="12" y="12" fill="#ffb900"/></svg>
-      Sign in with Microsoft
-    </button>
-  </div>
-</div>
-<div id="about-overlay" onclick="toggleAbout()"></div>
-<div id="about-modal">
-  <div id="about-header">About EAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
-  <div id="about-body">
-    <p><strong>EAT</strong> is <strong>Enterprise Application Testing</strong>, the Center of Excellence behind every ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for details.</p>
-  </div>
-</div>
-
-<!-- ============================= -->
-<!-- AI Knowledge Assistant -->
-<!-- ============================= -->
-<div id="chatbot-button" onclick="toggleChatbot()"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="4" y="8" width="16" height="12" rx="3"/>
-  <circle cx="9" cy="14" r="1.1" fill="white" stroke="none"/>
-  <circle cx="15" cy="14" r="1.1" fill="white" stroke="none"/>
-  <path d="M9 17.3h6"/>
-  <path d="M12 8V5"/>
-  <circle cx="12" cy="3.4" r="1.2" fill="white" stroke="none"/>
-  <path d="M2 12h2M20 12h2"/>
-</svg></div>
-<div id="chatbot-window">
-  <div id="chat-header">
-    <span>EAT Knowledge Assistant</span>
-    <span class="close" onclick="toggleChatbot()">&times;</span>
-  </div>
-  <div id="chat-body">
-    <div class="bot-message">
-      <strong>👋 Welcome!</strong><br><br>
-      I can search both COE deliverables and linked documents.
-      Ask me things like:<br><br>
-      • Show me deliverable 3.6<br>
-      • What's done in Standards?<br>
-      • Automation framework
+  </main>
+  <footer class="site-footer">TREAT Center of Excellence — Internal Knowledge Repository
+    &middot;
+    Documents hosted in <b>SharePoint / Teamss</b></footer>
+  <div id="signinGate">
+    <div class="signin-gate-card">
+      <h3>Sign-in required</h3>
+      <p>This COE repository is restricted to your organization. Sign in with your Microsoft work account to continue.
+      </p>
+      <button class="signin-btn" onclick="signIn()">
+        <svg viewBox="0 0 23 23">
+          <rect width="10" height="10" x="1" y="1" fill="#f25022" />
+          <rect width="10" height="10" x="12" y="1" fill="#7fba00" />
+          <rect width="10" height="10" x="1" y="12" fill="#00a4ef" />
+          <rect width="10" height="10" x="12" y="12" fill="#ffb900" />
+        </svg>
+        Sign in with Microsoft
+      </button>
     </div>
   </div>
-  <div id="chat-footer">
-    <input id="chat-input" type="text" placeholder="Ask about the COE repository…" onkeypress="if(event.key==='Enter'){sendMessage();}">
-    <button onclick="sendMessage()">Send</button>
+  <div id="about-overlay" onclick="toggleAbout()"></div>
+  <div id="about-modal">
+    <div id="about-header">About TREAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
+    <div id="about-body">
+      <p><strong>TREAT</strong> is <strong>Tx’s Enterprise Application Testing</strong>, the Center of Excellence behind
+        every
+        ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for
+        details.</p>
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="js/site.js"></script>
-<script src="js/auth.js"></script>
+  <!-- ============================= -->
+  <!-- AI Knowledge Assistant -->
+  <!-- ============================= -->
+  <div id="chatbot-button" onclick="toggleChatbot()"><svg viewBox="0 0 24 24" fill="none" stroke="white"
+      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="8" width="16" height="12" rx="3" />
+      <circle cx="9" cy="14" r="1.1" fill="white" stroke="none" />
+      <circle cx="15" cy="14" r="1.1" fill="white" stroke="none" />
+      <path d="M9 17.3h6" />
+      <path d="M12 8V5" />
+      <circle cx="12" cy="3.4" r="1.2" fill="white" stroke="none" />
+      <path d="M2 12h2M20 12h2" />
+    </svg></div>
+  <div id="chatbot-window">
+    <div id="chat-header">
+      <span>TREAT Knowledge Assistant</span>
+      <span class="close" onclick="toggleChatbot()">&times;</span>
+    </div>
+    <div id="chat-body">
+      <div class="bot-message">
+        <strong>👋 Welcome!</strong><br><br>
+        I can search both COE deliverables and linked documents.
+        Ask me things like:<br><br>
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
+      </div>
+    </div>
+    <div id="chat-footer">
+      <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
+        onkeypress="if(event.key==='Enter'){sendMessage();}">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="js/auth.js"></script>
 </body>
+
 </html>

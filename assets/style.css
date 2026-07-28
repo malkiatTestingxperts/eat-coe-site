@@ -855,7 +855,7 @@ p {
 }
 
 .page-footer {
-  padding: 20px 34px;
+  padding: 20px 14px;
   font-size: 11.5px;
   color: var(--text-mute);
   border-top: 1px solid var(--border);
@@ -1087,18 +1087,21 @@ p {
 .site-header .logo {
   display: flex;
   align-items: center;
-  gap: 14px
+  gap: 2px;
 }
 
 .site-header .logo img {
-  height: 46px;
-  width: auto
+  border: transparent;
+  height: 56px;
+  width: auto;
+  margin-right: 10px;
 }
 
 .site-header .logo .lt {
   display: flex;
   flex-direction: column;
-  line-height: 1.15
+  margin-right: 5px;
+  line-height: 0.05
 }
 
 .site-header .logo .lt b {
@@ -1326,7 +1329,7 @@ p {
   background: var(--dark-bg);
   color: #93a5aa;
   text-align: center;
-  padding: 26px;
+  padding: 12px 20px;
   font-size: 12.5px
 }
 
@@ -2109,12 +2112,12 @@ body.role-contributor .viewer-only {
 
 .site-footer {
   text-align: center;
-  padding: 25px 20px;
+  padding: 15px 10px;
 }
 
 .footer-text {
-  margin-bottom: 25px;
-  line-height: 1.6;
+  margin-bottom: 1px;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
@@ -2130,7 +2133,7 @@ body.role-contributor .viewer-only {
 
 .footer-tech-card {
   width: 120px;
-  height: 55px;
+  height: 25px;
   background: transparent;
   border-radius: 0px;
   display: flex;
