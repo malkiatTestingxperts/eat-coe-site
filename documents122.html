@@ -25,7 +25,7 @@
         </div>
       </div>
       <div class="nav-item">
-        <a class="" href="sitemap.html">Pillars <span class="caret">▾</span></a>
+        <a class="" href="index.html#pillars">Pillars <span class="caret">▾</span></a>
         <div class="nav-dropdown">
           <a href="01-standards.html">01 · Standards & Best Practices</a>
           <a href="02-tools.html">02 · Tools & Technology</a>
@@ -38,7 +38,7 @@
         <a class="active" href="documents.html">Documents <span class="caret">▾</span></a>
         <div class="nav-dropdown">
           <a href="documents.html">All Documents</a>
-          <a href="register-document.html">Register a Document</a>
+          <a href="documents.html#register">Register a Document</a>
         </div>
       </div>
       <div class="nav-item">
@@ -56,21 +56,46 @@
   <section class="hero hero-sm">
     <span class="eyebrow">Repository</span>
     <h1>Documents</h1>
-    <p class="tagline">Search and download documents already in the catalog. Every file lives in SharePoint/Teams — this
-      page just helps you find it.</p>
+    <p class="tagline">Upload, tag, search, and download documents. Files are stored in your browser for now (demo) and
+      will move to SharePoint once Graph API sign-in is connected.</p>
   </section>
   <main class="page-content">
     <div class="wrap">
 
       <div class="role-banner viewer-only">
-        <span>You're browsing as a <b>Viewer</b> (read-only). Anyone can <a href="register-document.html"
-            style="color:var(--ink);font-weight:700">register a document</a> — <b>Log In</b> in the top-right with your
-          Microsoft account to also edit tags or update story status.</span>
+        <span>You're browsing as a <b>Viewer</b> (read-only). <b>Log In</b> in the top-right with your Microsoft account
+          to upload documents, edit tags, or update story status.</span>
       </div>
       <div class="role-banner contributor-only">
-        <span>You're signed in as a <b>Contributor</b>. You can edit tags and update story status, in addition to
-          everything Viewers can do. This is granted simply by signing in for now — it isn't yet tied to your real
-          SharePoint permissions.</span>
+        <span>You're signed in as a <b>Contributor</b>. You can upload documents, edit tags, and update story status.
+          This is granted simply by signing in for now — it isn't yet tied to your real SharePoint permissions.</span>
+      </div>
+
+      <div class="section-title" id="register">Upload a document</div>
+      <div class="card contributor-only" style="margin-bottom:26px">
+        <p style="font-size:12.5px;color:var(--text-mute);margin-bottom:12px">Stored in your browser for now (demo, 4MB
+          cap per file) — will upload straight into the SharePoint folder once Graph API sign-in is connected. No code
+          changes will be needed on this page when that happens.</p>
+        <form id="registerForm">
+          <div class="uf-row">
+            <input type="text" id="regName" placeholder="Document name (optional — defaults to file name)"
+              style="flex:2;padding:9px 12px;border-radius:8px;border:1px solid var(--border)">
+            <input type="file" id="regFile" style="flex:3">
+          </div>
+          <div class="uf-row">
+            <select id="regPillar" style="padding:9px 12px;border-radius:8px;border:1px solid var(--border)">
+              <option value="">No specific pillar</option>
+              <option value="01">01 · Standards & Best Practices</option>
+              <option value="02">02 · Tools & Technology</option>
+              <option value="03">03 · Monitoring & Continuous Improvement</option>
+              <option value="04">04 · Capability Building & Enablement</option>
+              <option value="05">05 · Innovation</option>
+            </select>
+            <input type="text" id="regTags" placeholder="tags, comma separated"
+              style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--border)">
+            <button type="submit">Upload document</button>
+          </div>
+        </form>
       </div>
 
       <div class="section-title">All documents</div>
@@ -87,16 +112,6 @@
       </div>
       <div class="card" id="docCatalog">
         <div class="ql-empty">Loading…</div>
-      </div>
-
-      <div class="register-cta">
-        <div>
-          <h4>Have a document to contribute?</h4>
-          <p>Anyone — Viewer or Contributor — can submit a document for the repository. Fill out a short form and it
-            becomes a ready-to-send email with all the details attached.</p>
-        </div>
-        <a class="signin-btn" style="background:var(--teal);color:#fff" href="register-document.html">Register a
-          Document →</a>
       </div>
 
     </div>
@@ -149,7 +164,7 @@
     </div>
     <div id="chat-body">
       <div class="bot-message">
-        <strong> Welcome!</strong><br><br>
+        <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
         • Show me deliverable 3.6<br>

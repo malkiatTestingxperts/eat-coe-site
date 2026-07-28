@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Documents · EAT COE</title>
+  <title>Register a Document · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
 </head>
@@ -54,49 +54,93 @@
     </nav>
   </header>
   <section class="hero hero-sm">
-    <span class="eyebrow">Repository</span>
-    <h1>Documents</h1>
-    <p class="tagline">Search and download documents already in the catalog. Every file lives in SharePoint/Teams — this
-      page just helps you find it.</p>
+    <span class="eyebrow">Contribute</span>
+    <h1>Register a Document</h1>
+    <p class="tagline">Fill this out and we'll turn it into a ready-to-send email — attach your file in your email app
+      and send. Open to everyone, Viewer or Contributor.</p>
   </section>
   <main class="page-content">
     <div class="wrap">
 
-      <div class="role-banner viewer-only">
-        <span>You're browsing as a <b>Viewer</b> (read-only). Anyone can <a href="register-document.html"
-            style="color:var(--ink);font-weight:700">register a document</a> — <b>Log In</b> in the top-right with your
-          Microsoft account to also edit tags or update story status.</span>
-      </div>
-      <div class="role-banner contributor-only">
-        <span>You're signed in as a <b>Contributor</b>. You can edit tags and update story status, in addition to
-          everything Viewers can do. This is granted simply by signing in for now — it isn't yet tied to your real
-          SharePoint permissions.</span>
+      <div class="callout" style="margin-top:0">
+        <h4>How this works</h4>
+        <p>This page cannot upload files directly (that needs SharePoint sign-in, which isn't connected yet). Instead:
+          fill in the details below, click <b>Attach a file</b> to pick it from your computer, then <b>Open Email to
+            Send</b> — your email app opens with everything pre-filled. Just attach the file you picked (browsers can't
+          do this step automatically) and hit send. The COE team files it into the right SharePoint folder based on the
+          pillar/labels you chose.</p>
       </div>
 
-      <div class="section-title">All documents</div>
-      <div class="doc-toolbar">
-        <input type="text" id="docSearch" placeholder="Search documents by name, tag, owner…">
-        <select id="docPillarFilter">
-          <option value="All">All pillars</option>
-          <option value="01">01 · Standards</option>
-          <option value="02">02 · Tools</option>
-          <option value="03">03 · Monitoring</option>
-          <option value="04">04 · Capability</option>
-          <option value="05">05 · Innovation</option>
-        </select>
-      </div>
-      <div class="card" id="docCatalog">
-        <div class="ql-empty">Loading…</div>
-      </div>
-
-      <div class="register-cta">
-        <div>
-          <h4>Have a document to contribute?</h4>
-          <p>Anyone — Viewer or Contributor — can submit a document for the repository. Fill out a short form and it
-            becomes a ready-to-send email with all the details attached.</p>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+        <div class="card">
+          <form id="docRegisterForm">
+            <div class="reg-field">
+              <label>Your name</label>
+              <input type="text" id="rfName" placeholder="Jordan Patel">
+            </div>
+            <div class="reg-field">
+              <label>Your email <span class="reg-optional">(optional, helps us reply)</span></label>
+              <input type="email" id="rfEmail" placeholder="jordan.patel@company.com">
+            </div>
+            <div class="reg-field">
+              <label>Document name</label>
+              <input type="text" id="rfDocName" placeholder="e.g. Regression Test Checklist v2.docx">
+            </div>
+            <div class="reg-field">
+              <label>Description <span class="reg-optional">(optional)</span></label>
+              <textarea id="rfDescription" rows="3"
+                placeholder="What is this document and why does it belong in the repository?"></textarea>
+            </div>
+            <div class="reg-field-row">
+              <div class="reg-field">
+                <label>Pillar</label>
+                <select id="rfPillar">
+                  <option value="">No specific pillar</option>
+                  <option value="01">01 · Standards & Best Practices</option>
+                  <option value="02">02 · Tools & Technology</option>
+                  <option value="03">03 · Monitoring & Continuous Improvement</option>
+                  <option value="04">04 · Capability Building & Enablement</option>
+                  <option value="05">05 · Innovation</option>
+                </select>
+              </div>
+              <div class="reg-field">
+                <label>Related story <span class="reg-optional">(optional)</span></label>
+                <select id="rfStory">
+                  <option value="">No specific story</option>
+                </select>
+              </div>
+            </div>
+            <div class="reg-field">
+              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right
+                  folder)</span></label>
+              <input type="text" id="rfTags" placeholder="e.g. automation, regression, checklist">
+            </div>
+            <div class="reg-field">
+              <label>Attach a file</label>
+              <div class="reg-file-row">
+                <label class="signin-btn reg-attach-btn" for="rfFile"
+                  style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
+                <input type="file" id="rfFile" style="display:none">
+                <span id="rfFileName" class="reg-filename"></span>
+              </div>
+            </div>
+          </form>
         </div>
-        <a class="signin-btn" style="background:var(--teal);color:#fff" href="register-document.html">Register a
-          Document →</a>
+
+        <div class="card email-preview" id="emailPreview">
+          <h4>Email preview</h4>
+          <div class="ep-field"><span>To</span><span id="epTo"></span></div>
+          <div class="ep-field"><span>Subject</span><span class="ep-subject"></span></div>
+          <pre class="ep-body"></pre>
+          <div class="reg-actions">
+            <a id="mailtoBtn" class="signin-btn" style="background:var(--teal);color:#fff" href="#">📧 Open Email to
+              Send</a>
+            <button type="button" id="copyBtn" class="signout-btn"
+              style="border-color:var(--border);color:var(--ink)">📋 Copy email content</button>
+          </div>
+          <p class="uf-note" style="margin-top:10px">Remember: attach your file in your email app before sending — a
+            webpage can't attach it for you.</p>
+        </div>
       </div>
 
     </div>
@@ -149,7 +193,7 @@
     </div>
     <div id="chat-body">
       <div class="bot-message">
-        <strong> Welcome!</strong><br><br>
+        <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
         • Show me deliverable 3.6<br>

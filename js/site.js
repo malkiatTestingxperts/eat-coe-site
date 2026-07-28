@@ -902,57 +902,166 @@ function getDocsForStory(code) {
   return getAllDocuments().filter(d => d.storyCode === code);
 }
 
-function readFileAsDataURL(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-const MAX_LOCAL_FILE_BYTES = 4 * 1024 * 1024; // ~4MB soft cap for browser-local demo storage
-
-/**
- * Registers a document. `file` (a real File from an <input type=file>) is
- * optional. If provided and under the size cap, its bytes are stored locally
- * (browser only) so the Download button genuinely works today.
- *
- * TODO (once Graph API / SSO is wired up): replace the localStorage-based
- * storage below with an actual upload to the SharePoint drive item endpoint
- * (PUT /sites/{id}/drive/items/{path}:/content) and drop the local fileData
- * entirely — the doc-row UI and its buttons do not need to change.
+/* ---------------- Register a Document (email-based contribution) ----------------
+ * There is no in-browser file upload anymore: real documents live in
+ * SharePoint/Teams, and files are routed there by a human who reads the
+ * submitted email and files the attachment into the folder matching the
+ * chosen pillar/story labels. This section only composes that email —
+ * nothing here writes to the document catalog or to any storage.
+ * TODO: replace with a direct Microsoft Graph upload once SSO has
+ * Sites.Selected write access — at that point this form could upload for
+ * real, but the mailto fallback is still worth keeping for anyone without
+ * SharePoint access.
  */
-async function registerDocument({ name, file, storyCode, pillarCode, pillar, tags }) {
-  const docs = getUserDocs();
-  const id = "user-" + Date.now();
-  const today = new Date().toISOString().slice(0, 10);
-  const doc = {
-    id, name: name || (file ? file.name : "Untitled document"),
-    url: SHAREPOINT_FOLDER_URL, type: "document", sourceType: "user",
-    storyCode: storyCode || null, pillarCode: pillarCode || null, pillar: pillar || null,
-    uploadedBy: getUserName(), uploadDate: today, lastModifiedBy: getUserName(), lastModifiedDate: today,
-    tags: tags || [], downloads: 0, featured: false,
-    fileData: null, fileType: file ? file.type : null, fileSize: file ? file.size : null,
-    location: "Uploaded locally by " + getUserName() + " (demo storage — will move to SharePoint once Graph API is connected)"
-  };
+const COE_INTAKE_EMAIL = "eat-coe-submissions@txplin.com"; // TODO: replace with your real intake mailbox
 
-  if (file) {
-    if (file.size > MAX_LOCAL_FILE_BYTES) {
-      alert("This demo storage caps files at 4MB (browser storage limit). \"" + file.name + "\" is larger, so only its metadata was saved — the file itself was not stored. Once SharePoint upload is connected, this limit goes away.");
-    } else {
-      try {
-        doc.fileData = await readFileAsDataURL(file);
-      } catch (e) {
-        console.error("Could not read file:", e);
-      }
+const PILLAR_FOLDERS = {
+  "01": "docs/01-standards",
+  "02": "docs/02-tools",
+  "03": "docs/03-monitoring",
+  "04": "docs/04-capability",
+  "05": "docs/05-innovation"
+};
+const PILLAR_NAMES = {
+  "01": "Standards & Best Practices",
+  "02": "Tools & Technology",
+  "03": "Monitoring & Continuous Improvement",
+  "04": "Capability Building & Enablement",
+  "05": "Innovation"
+};
+
+function suggestedFolder(pillarCode, storyCode) {
+  if (!pillarCode || !PILLAR_FOLDERS[pillarCode]) return null;
+  let path = PILLAR_FOLDERS[pillarCode];
+  if (storyCode) {
+    const story = STORIES.find(s => s.code === storyCode);
+    if (story) path += "/" + story.code + " " + story.title;
+  }
+  return path + "/";
+}
+function buildEmail() {
+  const name = docNameInput.value.trim() || "(untitled document)";
+  const contributor = nameInput.value.trim() || "(not provided)";
+  const contributorEmail = document.getElementById("rfEmail").value.trim();
+  const desc = document.getElementById("rfDescription").value.trim();
+  const tags = document.getElementById("rfTags").value.trim();
+  const pillar = pillarSelect.value;
+  const story = storySelect.value;
+  const file = fileInput.files[0];
+  const folder = suggestedFolder(pillar, story);
+
+  const subject = "COE Document Submission: " + name;
+  let body = "New document submission for the EAT COE repository.\n\n";
+  body += "Document name: " + name + "\n";
+  body += "Submitted by: " + contributor + (contributorEmail ? " (" + contributorEmail + ")" : "") + "\n";
+  body += "Pillar: " + (PILLAR_NAMES[pillar] || "Not specified") + "\n";
+  if (story) {
+    const s = STORIES.find(x => x.code === story);
+    body += "Related story: " + story + (s ? " · " + s.title : "") + "\n";
+  }
+  body += "Labels/tags: " + (tags || "none") + "\n";
+  if (folder) body += "Suggested SharePoint folder: " + folder + "\n";
+  if (desc) body += "\nDescription:\n" + desc + "\n";
+  body += "\n----------------------------------------\n";
+  body += file
+    ? ("REMINDER: attach \"" + file.name + "\" to this email before sending — a webpage can't attach it automatically.\n")
+    : "REMINDER: attach your document file(s) to this email before sending.\n";
+  return { subject, body };
+}
+function initRegisterForm() {
+  const form = document.getElementById("docRegisterForm");
+  if (!form) return;
+
+  const pillarSelect = document.getElementById("rfPillar");
+  const storySelect = document.getElementById("rfStory");
+  const fileInput = document.getElementById("rfFile");
+  const fileNameLabel = document.getElementById("rfFileName");
+  const nameInput = document.getElementById("rfName");
+  const docNameInput = document.getElementById("rfDocName");
+  const preview = document.getElementById("emailPreview");
+  const mailtoBtn = document.getElementById("mailtoBtn");
+  const copyBtn = document.getElementById("copyBtn");
+
+  if (nameInput && getUserName() !== "Guest") nameInput.value = getUserName();
+
+  function populateStoryOptions() {
+    const pillar = pillarSelect.value;
+    const current = storySelect.value;
+    storySelect.innerHTML = '<option value="">No specific story</option>' +
+      STORIES.filter(s => !pillar || s.pillarCode === pillar)
+        .map(s => `<option value="${s.code}">${escapeHtml(s.code)} · ${escapeHtml(s.title)}</option>`).join("");
+    if ([...storySelect.options].some(o => o.value === current)) storySelect.value = current;
+  }
+  populateStoryOptions();
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("pillar")) pillarSelect.value = params.get("pillar");
+  populateStoryOptions();
+  if (params.get("story")) storySelect.value = params.get("story");
+
+  pillarSelect.addEventListener("change", () => { populateStoryOptions(); updatePreview(); });
+  form.querySelectorAll("input, textarea, select").forEach(el => {
+    el.addEventListener("input", updatePreview);
+    el.addEventListener("change", updatePreview);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
+    fileNameLabel.textContent = file ? ("📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)") : "";
+    if (file && !docNameInput.value) docNameInput.value = file.name;
+    updatePreview();
+  });
+
+  function buildEmail() {
+    const name = docNameInput.value.trim() || "(untitled document)";
+    const contributor = nameInput.value.trim() || "(not provided)";
+    const contributorEmail = document.getElementById("rfEmail").value.trim();
+    const desc = document.getElementById("rfDescription").value.trim();
+    const tags = document.getElementById("rfTags").value.trim();
+    const pillar = pillarSelect.value;
+    const story = storySelect.value;
+    const file = fileInput.files[0];
+    const folder = suggestedFolder(pillar, story);
+
+    const subject = "COE Document Submission: " + name;
+    let body = "New document submission for the EAT COE repository.\n\n";
+    body += "Document name: " + name + "\n";
+    body += "Submitted by: " + contributor + (contributorEmail ? " (" + contributorEmail + ")" : "") + "\n";
+    body += "Pillar: " + (PILLAR_NAMES[pillar] || "Not specified") + "\n";
+    if (story) {
+      const s = STORIES.find(x => x.code === story);
+      body += "Related story: " + story + (s ? " · " + s.title : "") + "\n";
     }
+    body += "Labels/tags: " + (tags || "none") + "\n";
+    if (folder) body += "Suggested SharePoint folder: " + folder + "\n";
+    if (desc) body += "\nDescription:\n" + desc + "\n";
+    body += "\n----------------------------------------\n";
+    body += file
+      ? ("REMINDER: attach \"" + file.name + "\" to this email before sending — a webpage can't attach it automatically.\n")
+      : "REMINDER: attach your document file(s) to this email before sending.\n";
+    return { subject, body };
   }
 
-  docs.push(doc);
-  saveUserDocs(docs);
-  logActivity("upload", doc.name);
-  return doc;
+  function updatePreview() {
+    const { subject, body } = buildEmail();
+    document.getElementById("epTo").textContent = COE_INTAKE_EMAIL;
+    preview.querySelector(".ep-subject").textContent = subject;
+    preview.querySelector(".ep-body").textContent = body;
+    mailtoBtn.href = "mailto:" + COE_INTAKE_EMAIL + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+
+  copyBtn.addEventListener("click", () => {
+    const { subject, body } = buildEmail();
+    const full = "To: " + COE_INTAKE_EMAIL + "\nSubject: " + subject + "\n\n" + body;
+    navigator.clipboard.writeText(full).then(() => {
+      const original = copyBtn.textContent;
+      copyBtn.textContent = "✓ Copied";
+      setTimeout(() => { copyBtn.textContent = original; }, 1800);
+    }).catch(() => alert("Couldn't copy automatically — select the preview text and copy it manually."));
+  });
+
+  form.addEventListener("submit", (e) => e.preventDefault());
+  updatePreview();
 }
 
 function deleteUserDocument(id) {
@@ -1029,6 +1138,23 @@ function escapeHtml(str) {
   }[s]));
 }
 
+function buildSnippet(text, words) {
+  if (!text) return null;
+  const lower = text.toLowerCase();
+  let idx = -1;
+  for (const w of words) {
+    idx = lower.indexOf(w);
+    if (idx !== -1) break;
+  }
+  if (idx === -1) return null;
+  const start = Math.max(0, idx - 60);
+  const end = Math.min(text.length, idx + 120);
+  let snippet = text.slice(start, end).replace(/\s+/g, " ").trim();
+  if (start > 0) snippet = "…" + snippet;
+  if (end < text.length) snippet = snippet + "…";
+  return snippet;
+}
+
 function searchAll(query, { pillar = "All", typeFilter = "All" } = {}) {
   const q = query.trim().toLowerCase();
   const words = q.split(/\s+/).filter(Boolean);
@@ -1041,20 +1167,32 @@ function searchAll(query, { pillar = "All", typeFilter = "All" } = {}) {
   if (!words.length) return list;
 
   const scored = list.map(item => {
-    const haystack = [
+    const metaText = [
       item.code || "", item.title || item.name || "", item.pillar, item.status || "",
       item.owner || item.uploadedBy || "", item.description || "", (item.tags || []).join(" ")
     ].join(" ").toLowerCase();
+    const fullTextLower = (item.fullText || "").toLowerCase();
+
     let score = 0;
+    let matchedInBody = false;
     for (const w of words) {
-      if (haystack.includes(w)) {
+      if (metaText.includes(w)) {
         score += 1;
         if ((item.title || item.name || "").toLowerCase().includes(w)) score += 1;
         if ((item.code || "").toLowerCase() === w) score += 3;
       }
+      // Full-text matches count too, but weighted lower than metadata —
+      // finding a word once buried in a 10-page document is a weaker
+      // signal than it appearing in the title or tags.
+      if (fullTextLower && fullTextLower.includes(w)) {
+        score += 0.5;
+        matchedInBody = true;
+      }
     }
-    return { item, score };
-  }).filter(r => r.score > 0);
+    if (score <= 0) return null;
+    const resultItem = matchedInBody ? { ...item, _snippet: buildSnippet(item.fullText, words) } : item;
+    return { item: resultItem, score };
+  }).filter(Boolean);
 
   scored.sort((a, b) => b.score - a.score);
   return scored.map(r => r.item);
@@ -1069,6 +1207,7 @@ document.addEventListener("DOMContentLoaded", () => {
   renderDocumentsPage();
   renderStoryDocSections();
   renderDashboardExtras();
+  initRegisterForm();
 });
 
 /* ---------------- nav dropdown (mobile tap-to-open) ---------------- */
@@ -1125,16 +1264,20 @@ function renderResultCard(item) {
   const link = isStory ? item.url : "#";
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
+  const snippetHtml = item._snippet
+    ? `<p class="body-match">🔍 Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
+    : "";
   return `
     <div class="result-card">
       <div class="rc-top">
         <a class="rc-title" href="${link}" ${onclick}>${item.code ? escapeHtml(item.code) + " · " : ""}${escapeHtml(title)}</a>
-        <span class="rc-status-wrap">
+        <span style="display:flex;gap:6px;align-items:center">
           <span class="type-badge ${item.type}">${item.type}</span>${statusChip}
         </span>
       </div>
       <div class="rc-meta">${meta}</div>
       <p>${escapeHtml(desc)}</p>
+      ${snippetHtml}
     </div>`;
 }
 
@@ -1186,35 +1329,24 @@ function renderDocumentsPage() {
   if (searchBox) searchBox.addEventListener("input", draw);
   if (pillarSelect) pillarSelect.addEventListener("change", draw);
   draw();
-
-  const form = document.getElementById("registerForm");
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("regName").value.trim();
-      const fileInput = document.getElementById("regFile");
-      const file = fileInput && fileInput.files.length ? fileInput.files[0] : null;
-      const pillarCode = document.getElementById("regPillar").value;
-      const tags = document.getElementById("regTags").value.split(",").map(t => t.trim()).filter(Boolean);
-      if (!name && !file) return;
-      const pillarNames = { "01": "Standards & Best Practices", "02": "Tools & Technology", "03": "Monitoring & Continuous Improvement", "04": "Capability Building & Enablement", "05": "Innovation" };
-      await registerDocument({ name, file, pillarCode: pillarCode || null, pillar: pillarNames[pillarCode] || null, tags });
-      form.reset();
-      draw();
-      renderQuickLinks();
-    });
-  }
 }
 
 function docRowHtml(d) {
   const canManage = d.sourceType === "user";
   const hasLocalFile = !!d.fileData;
+  let indexBadge = "";
+  if (d.fullText) {
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+  } else if (d.sourceType === "user" && d.fullTextStatus === "unsupported") {
+    indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
+  }
   return `
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
-        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${hasLocalFile ? '' : '<span class="sso-note">(SharePoint only)</span>'}</div>
+        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${hasLocalFile ? '' : '<span class="sso-note">(SharePoint only)</span>'} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -1268,32 +1400,15 @@ function renderStoryDocSections() {
     const code = container.getAttribute("data-story-docs");
     const story = STORIES.find(s => s.code === code);
     const docs = getDocsForStory(code);
+    const registerHref = `register-document.html?pillar=${story ? story.pillarCode : ""}&story=${code}`;
     container.innerHTML = `
       <h4>Documents for this deliverable</h4>
       ${docs.length ? docs.map(docRowHtml).join("") : `<div class="ql-empty">No documents linked yet.</div>`}
-      <div class="upload-box contributor-only">
-        <div class="uf-row">
-          <input type="text" placeholder="Document name (optional — defaults to file name)" id="qreg-name-${code}">
-          <input type="file" id="qreg-file-${code}">
-        </div>
-        <div class="uf-row">
-          <input type="text" placeholder="tags, comma separated" id="qreg-tags-${code}">
-          <button type="button" onclick="handleQuickRegister('${code}')">Upload document</button>
-        </div>
-        <div class="uf-note">Stored in your browser for now (demo, 4MB cap) — will upload straight to SharePoint once Graph API sign-in is connected.</div>
-      </div>`;
+      <a class="doc-link" href="${registerHref}" style="margin-top:10px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Register a document for this deliverable
+      </a>`;
   });
-}
-
-async function handleQuickRegister(code) {
-  const name = document.getElementById("qreg-name-" + code).value.trim();
-  const fileInput = document.getElementById("qreg-file-" + code);
-  const file = fileInput && fileInput.files.length ? fileInput.files[0] : null;
-  const tags = document.getElementById("qreg-tags-" + code).value.split(",").map(t => t.trim()).filter(Boolean);
-  if (!name && !file) return;
-  const story = STORIES.find(s => s.code === code);
-  await registerDocument({ name, file, storyCode: code, pillarCode: story ? story.pillarCode : null, pillar: story ? story.pillar : null, tags });
-  refreshDocViews();
 }
 
 /* ---------------- dashboard: metrics, activity tracker, story table ---------------- */
@@ -1410,7 +1525,7 @@ function addBotMessage(html) {
 function answerFromKnowledgeBase(keyword) {
   const results = searchAll(keyword);
   if (results.length === 0) {
-    addBotMessage("I couldn't find a match. Try a pillar name, a deliverable code (e.g. \"3.6\"), or a document keyword.");
+    addBotMessage("I couldn't find a match. Try a pillar name, a deliverable code (e.g. \"3.6\"), a document keyword, or even a phrase from inside an uploaded document.");
     return;
   }
   let html = "<b>I found these:</b><ul>";
@@ -1418,7 +1533,11 @@ function answerFromKnowledgeBase(keyword) {
     const isStory = item.type === "story";
     const title = isStory ? `${item.code} ${item.title}` : item.name;
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
-    html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span></li>`;
+    html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
+    if (item._snippet) {
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
+    }
+    html += `</li>`;
   });
   html += "</ul>";
   addBotMessage(html);
