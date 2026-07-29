@@ -2333,3 +2333,14 @@ body.role-contributor .viewer-only {
     padding: 12px 20px
   }
 }
+
+.reg-send-btn,
+#sendBtn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 12px;
+  min-width: 90px;
+  padding: 8px 18px;
+  font-size: 14px;
+  white-space: nowrap;
+}
