@@ -15,8 +15,8 @@
 
 const MSAL_CONFIG = {
   auth: {
-    clientId: "PASTE-YOUR-CLIENT-ID-HERE",
-    authority: "https://login.microsoftonline.com/PASTE-YOUR-TENANT-ID-HERE",
+    clientId: "9a817d03-ec3b-4e4f-8fa6-b7278cab47fe",
+    authority: "https://login.microsoftonline.com/d7e861c9-d924-4413-86db-05780e928657",
     redirectUri: window.location.origin + window.location.pathname
   },
   cache: {
@@ -33,8 +33,8 @@ const SSO_ENABLED =
 
 // Set to false if you'd rather make sign-in optional (a button, not a gate).
 const REQUIRE_SIGNIN = true;
-
 let msalInstance = null;
+
 if (SSO_ENABLED) {
   msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
 }
@@ -124,11 +124,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderAuthUI();
     return;
   }
+
   try {
+    await msalInstance.initialize();      // <-- Required in MSAL v3
     await msalInstance.handleRedirectPromise();
   } catch (e) {
-    console.error("MSAL redirect handling failed:", e);
+    console.error("MSAL initialization failed:", e);
   }
+
   const account = getActiveAccount();
   if (account) {
     onSignedIn(account);
