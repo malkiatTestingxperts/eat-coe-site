@@ -1207,8 +1207,9 @@ body.login-page {
 }
 
 .login-signin-btn {
-  background-color: #167D8A;
-  border: 1px solid rgba(255, 255, 255, .08);
+  background-color: #1fa3b3;
+  border: 1px solid #1fa3b3;
+  color: #FFFFFF;
   margin: 0 auto;
   margin-top: 10px;
   padding: 13px 26px;
