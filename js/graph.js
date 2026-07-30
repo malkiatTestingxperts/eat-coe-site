@@ -25,8 +25,28 @@ function encodeSharingUrl(url) {
 }
 
 /* ---------------- token + fetch helpers ---------------- */
+const GRAPH_CONSENT_FLAG_KEY = "eatcoe_graph_consent_pending";
+
+/**
+ * Silent-only token acquisition for background/automatic Graph calls
+ * (loading the live document catalog, background indexing, etc). This
+ * deliberately never opens an interactive popup: some tenants require an
+ * admin to explicitly approve permissions like Sites.ReadWrite.All /
+ * Files.ReadWrite.All, and a regular user clicking through that popup can't
+ * actually grant it — so popping it up automatically on every page
+ * navigation just interrupts the user with a dead end, over and over.
+ * Instead: try silently once, and if it fails, remember that for the rest
+ * of this browser session (sessionStorage) so we don't even retry it on
+ * every click — the site just keeps using the built-in document list until
+ * a real grant exists (e.g. after an admin approves it) and a fresh page
+ * load succeeds silently.
+ */
 async function getGraphToken() {
   if (typeof msalInstance === "undefined" || !msalInstance) throw new Error("MSAL is not initialized (SSO not configured).");
+  if (sessionStorage.getItem(GRAPH_CONSENT_FLAG_KEY) === "1") {
+    throw new Error("Skipping Graph — consent for Sites/Files permissions is still pending (cached this session; will retry on next full page load).");
+  }
+  if (typeof msalReady !== "undefined") await msalReady;
   const account = (typeof getActiveAccount === "function") ? getActiveAccount() : null;
   if (!account) throw new Error("Not signed in.");
   const request = { scopes: GRAPH_SCOPES, account };
@@ -34,9 +54,14 @@ async function getGraphToken() {
     const result = await msalInstance.acquireTokenSilent(request);
     return result.accessToken;
   } catch (e) {
-    console.warn("Silent Graph token acquisition failed, trying an interactive popup:", e);
-    const result = await msalInstance.acquireTokenPopup(request);
-    return result.accessToken;
+    console.warn(
+      "Silent Graph token acquisition failed — likely still pending admin " +
+      "approval for Sites.ReadWrite.All / Files.ReadWrite.All in Entra ID. " +
+      "Not showing an interactive popup for this automatically; falling back " +
+      "to the built-in document list for the rest of this session.", e
+    );
+    try { sessionStorage.setItem(GRAPH_CONSENT_FLAG_KEY, "1"); } catch (e2) { /* ignore */ }
+    throw e;
   }
 }
 
