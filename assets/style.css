@@ -11,7 +11,8 @@
   --teal: #29c5d6;
   --royal-blue-dark: #7a090e;
   /* accent cyan (replaces old #1F8A70) */
-  --teal-dark: #70b31f;
+  --teal-dark: #1fa3b3;
+  --teal-light: #126C77;
   /* hover / darker accent */
   --amber: #C7841B;
   --slate: #5b6b7a;
@@ -2413,10 +2414,10 @@ body.role-contributor .viewer-only {
 }
 
 .login-heading {
-  color: var(--royal-blue-dark);
+  color: var(--teal-light);
 }
 
 
 .sso-note.login-note {
-  color: var(--royal-blue-dark);
+  color: var(--teal-light);
 }
