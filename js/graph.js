@@ -10,18 +10,18 @@
    ========================================================================== */
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
-// Files.Read (no ".All") is a low-privilege delegated scope scoped to files
-// the signed-in user can already access — per Microsoft's own permissions
-// reference this does NOT require admin consent, unlike Sites.ReadWrite.All /
-// Files.ReadWrite.All (tenant-wide, "Yes" for admin consent required), which
-// this used to request and which triggered a blocking "Approval required"
-// screen on every attempt in tenants that require admin approval for those.
-// Everything this file currently does — resolving the shared folder link,
-// listing its contents, and downloading files — is read-only, so this is
-// enough. Real upload (see uploadFileToSharePoint below) needs write access
-// and isn't wired to any button yet; add "Files.ReadWrite" (also no admin
-// consent required per Microsoft's docs) to this list if that's ever wired up.
-const GRAPH_SCOPES = ["User.Read", "Files.Read"];
+// Files.ReadWrite (no ".All") is a low-privilege delegated scope scoped to
+// files the signed-in user can already access — per Microsoft's own
+// permissions reference this does NOT require admin consent, unlike
+// Sites.ReadWrite.All / Files.ReadWrite.All (tenant-wide, admin consent
+// required), which this used to request. It's ReadWrite rather than plain
+// Files.Read specifically because Microsoft's own documentation for the
+// /shares endpoint (used below to resolve the shared folder link) lists
+// Files.ReadWrite as its minimum required delegated permission — Files.Read
+// alone was not enough to resolve the share, which is why downloads/views
+// kept falling back to the generic SharePoint folder link even after the
+// previous fix.
+const GRAPH_SCOPES = ["User.Read", "Files.ReadWrite"];
 const GRAPH_CACHE_KEY = "eatcoe_graph_folder_cache";
 const GRAPH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — avoid hammering Graph on every page load
 const MAX_AUTO_INDEX_FILES = 25; // cap background full-text extraction per session
@@ -255,6 +255,37 @@ async function downloadGraphItem(doc) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
 }
 
+/**
+ * Navigates an already-open window straight to the document's real,
+ * pre-authenticated content URL — used as a fallback when we don't already
+ * have doc.downloadUrl cached (see openDocument() in site.js, which handles
+ * the common case of an already-cached URL by opening it directly, with no
+ * async step at all).
+ *
+ * This deliberately does NOT fetch the bytes itself and build a blob: URL.
+ * That was tried first, but browsers (Chromium at least) silently refuse to
+ * navigate another window via `.location.href` once the user-gesture that
+ * opened it has been "spent" by an intervening cross-origin fetch() — the
+ * navigation call doesn't error, it just does nothing. Handing the browser
+ * the real URL directly and letting its own navigation fetch it sidesteps
+ * that restriction entirely (this is exactly what a normal link click
+ * does), at the cost of not being able to guarantee inline rendering vs.
+ * download the way a blob: URL would — that now depends on whatever
+ * Content-Disposition SharePoint's own download URL returns for the file
+ * type, same as clicking a raw file link anywhere else.
+ *
+ * IMPORTANT: `targetWindow` must already be open (e.g. `window.open("",
+ * "_blank")`, called synchronously by the caller, before any `await`).
+ */
+async function viewGraphItem(doc, targetWindow) {
+  if (!targetWindow) throw new Error("No target window provided — it must be opened synchronously by the caller before calling this.");
+  const res = await graphFetch(`/drives/${doc.driveId}/items/${doc.itemId}`);
+  const item = await res.json();
+  const url = item["@microsoft.graph.downloadUrl"];
+  if (!url) throw new Error("No content URL available for " + doc.name);
+  targetWindow.location.href = url;
+}
+
 /* ---------------- real upload ----------------
  * Simple upload (fine up to 4MB — larger files need Graph's chunked
  * upload-session API instead). Uploads to the pillar subfolder if one
@@ -263,11 +294,10 @@ async function downloadGraphItem(doc) {
  * an email per the current requirements) — available for whenever real
  * in-browser upload is wanted instead of/alongside the email flow.
  *
- * NOTE: this needs write access, which GRAPH_SCOPES no longer requests (it's
- * read-only now, specifically to avoid the admin-consent prompt — see the
- * comment on GRAPH_SCOPES above). Add "Files.ReadWrite" to GRAPH_SCOPES
- * before wiring this up to anything — that scope is still "No" for admin
- * consent required per Microsoft's docs, same as Files.Read.
+ * NOTE: GRAPH_SCOPES already includes Files.ReadWrite, so the token this
+ * function gets does have write access — it's just not wired to any button
+ * yet (Register a Document intentionally emails instead, per current
+ * requirements).
  */
 async function uploadFileToSharePoint(file, pillarCode) {
   const folder = await resolveSharePointFolder();

@@ -933,7 +933,7 @@ function getDocsForStory(code) {
  * real, but the mailto fallback is still worth keeping for anyone without
  * SharePoint access.
  */
-const COE_INTAKE_EMAIL = "malkiat.singh@testingxperts.com"; // TODO: replace with your real intake mailbox
+const COE_INTAKE_EMAIL = "Treat@testingxperts.com";
 
 const PILLAR_FOLDERS = {
   "01": "docs/01-standards",
@@ -1165,13 +1165,44 @@ function updateDocTags(doc, newTags) {
 }
 
 /**
- * "View in SharePoint" — always opens the real item/folder link. For
- * documents fetched live via Microsoft Graph, doc.url is the real item's
- * webUrl; otherwise it falls back to the shared folder link.
+ * "View" — opens the document's actual content in a new tab (via
+ * viewGraphItem, see js/graph.js) for real SharePoint-sourced documents.
+ * Falls back to opening doc.url (or the shared folder link) for anything
+ * without real Graph-fetchable bytes yet (seed/pending entries, or if the
+ * Graph fetch fails for any reason) — same fail-safe pattern as Download.
  */
-function openDocument(doc) {
+async function openDocument(doc) {
   bumpDownload(doc.id);
   logActivity("view", doc.name);
+
+  if (doc.sourceType === "graph" && doc.downloadUrl) {
+    // Common case: we already have a real, signed content URL cached from
+    // the file listing. Open it directly and synchronously — a normal
+    // window.open with a real URL is never blocked as a popup, and letting
+    // the browser's own navigation fetch it (rather than us fetching bytes
+    // via JS first) avoids a real Chromium restriction where an
+    // intervening cross-origin fetch() silently blocks later attempts to
+    // navigate another window.
+    window.open(doc.downloadUrl, "_blank", "noopener");
+    return;
+  }
+
+  if (doc.sourceType === "graph" && typeof viewGraphItem === "function") {
+    // Rarer case: no cached URL yet, need one more Graph call first. Open
+    // a blank tab synchronously (before any await) to preserve the click's
+    // user-gesture, then navigate it once viewGraphItem resolves.
+    const win = window.open("", "_blank");
+    if (win) {
+      try {
+        await viewGraphItem(doc, win);
+        return;
+      } catch (e) {
+        console.error("Could not open the live SharePoint file inline, falling back to its SharePoint page:", e);
+        try { win.close(); } catch (e2) { /* ignore */ }
+      }
+    }
+  }
+
   window.open(doc.url || SHAREPOINT_FOLDER_URL, "_blank", "noopener");
 }
 
@@ -1441,7 +1472,7 @@ function docRowHtml(d) {
   const actions = isPending
     ? `<span class="sso-note">Fill out and send the form above to submit this ↑</span>`
     : `<button onclick='downloadDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>⬇ Download</button>
-       <button onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>↗ View in SharePoint</button>
+       <button onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>↗ View</button>
        ${canManage ? `<button class="danger contributor-only" onclick="handleDeleteDoc('${d.id}')">Remove</button>` : ""}`;
   return `
     <div class="doc-row" data-doc-id="${d.id}">
