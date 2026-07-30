@@ -121,14 +121,33 @@ async function graphFetch(pathOrUrl, options = {}) {
 /* ---------------- resolving + listing the shared folder ---------------- */
 async function resolveSharePointFolder() {
   const encoded = encodeSharingUrl(SHAREPOINT_FOLDER_URL);
-  const res = await graphFetch(`/shares/${encoded}/driveItem`);
-  const item = await res.json();
-  return {
-    driveId: item.parentReference && item.parentReference.driveId,
-    itemId: item.id,
-    webUrl: item.webUrl,
-    name: item.name
-  };
+  try {
+    const res = await graphFetch(`/shares/${encoded}/driveItem`);
+    const item = await res.json();
+    return {
+      driveId: item.parentReference && item.parentReference.driveId,
+      itemId: item.id,
+      webUrl: item.webUrl,
+      name: item.name
+    };
+  } catch (e) {
+    console.error(
+      "Could not resolve the shared SharePoint folder via Microsoft Graph. " +
+      "This is almost always a real access/permissions issue on the SharePoint " +
+      "side (the signed-in user doesn't have access to this specific link/site), " +
+      "not a bug in this code — the app's permission scope was already granted " +
+      "successfully (that's a separate step from the sign-in itself). " +
+      "The exact link being resolved is:\n  " + SHAREPOINT_FOLDER_URL +
+      "\nTo check: open that link directly in a browser, signed in as the same " +
+      "account, and see whether SharePoint itself grants access without this app " +
+      "involved at all. If that also fails or asks to request access, an admin " +
+      "needs to grant that account real access to the site/folder (adding them as " +
+      "a member/visitor, or re-sharing the link with their account specifically) " +
+      "— no code change here can substitute for that.",
+      e
+    );
+    throw e;
+  }
 }
 
 async function listSharePointChildren(driveId, itemId) {
