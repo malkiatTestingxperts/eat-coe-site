@@ -2412,5 +2412,10 @@ body.role-contributor .viewer-only {
 }
 
 .login-heading {
-  color: var(--teal-dark);
+  color: var(--dark-bg-alt);
+}
+
+
+.sso-note.login-note {
+  color: var(--dark-bg-alt);
 }
