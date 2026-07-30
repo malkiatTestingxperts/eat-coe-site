@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -77,7 +77,16 @@ async function signIn() {
   if (!msalInstance) return;
   try {
     await msalReady;
-    const result = await msalInstance.loginPopup({ scopes: ["User.Read"] });
+    // Request the Graph scope (Sites.Read.All) together with the basic
+    // sign-in scope in this one popup, instead of asking for it separately
+    // the first time a document is opened. This used to be two sequential
+    // popups — safe to merge now that Sites.Read.All has real tenant-wide
+    // admin consent already, so including it upfront doesn't trigger any
+    // extra approval screen, just a single normal sign-in.
+    const loginScopes = (typeof GRAPH_SCOPES !== "undefined" && GRAPH_SCOPES && GRAPH_SCOPES.length)
+      ? GRAPH_SCOPES
+      : ["User.Read"];
+    const result = await msalInstance.loginPopup({ scopes: loginScopes });
     msalInstance.setActiveAccount(result.account);
     onSignedIn(result.account);
     // On the dedicated login page, a successful sign-in sends you straight
