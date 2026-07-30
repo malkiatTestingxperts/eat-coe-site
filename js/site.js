@@ -10,7 +10,7 @@
    to make the catalog shared across everyone using a free backend.
    ========================================================================== */
 
-const SHAREPOINT_FOLDER_URL = "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP";
+const SHAREPOINT_FOLDER_URL = "https://txplin.sharepoint.com/sites/EnterpriseApplicationTesting-EAT/Shared Documents";//"https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP";
 
 const STORIES = [
   {

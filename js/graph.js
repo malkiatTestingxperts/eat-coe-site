@@ -122,34 +122,44 @@ async function graphFetch(pathOrUrl, options = {}) {
  * into { hostname, sitePath } for use with Graph's /sites/{hostname}:{sitePath}
  * endpoint. Returns null if the URL doesn't match either shape.
  */
+/**
+ * Parses a SharePoint URL into { hostname, sitePath, subPath, isSharingLink }.
+ * Handles two shapes:
+ *   - A sharing link:  https://tenant.sharepoint.com/:f:/s/SiteName/AbCdEf...
+ *   - A normal site/library URL: https://tenant.sharepoint.com/sites/SiteName/Shared Documents
+ * `subPath` (e.g. "Shared Documents") is only meaningful for the second
+ * shape — sharing links carry an opaque token instead, resolved via /shares.
+ */
 function parseSharePointSitePath(url) {
   const sharingMatch = /^https:\/\/([^/]+)\/:[a-z]:\/[a-z]\/([^/]+)\//i.exec(url);
-  if (sharingMatch) return { hostname: sharingMatch[1], sitePath: "/sites/" + sharingMatch[2] };
-  const siteMatch = /^https:\/\/([^/]+)\/sites\/([^/]+)/i.exec(url);
-  if (siteMatch) return { hostname: siteMatch[1], sitePath: "/sites/" + siteMatch[2] };
+  if (sharingMatch) {
+    return { hostname: sharingMatch[1], sitePath: "/sites/" + sharingMatch[2], subPath: null, isSharingLink: true };
+  }
+  const siteMatch = /^https:\/\/([^/]+)\/sites\/([^/]+)\/?(.*)$/i.exec(url);
+  if (siteMatch) {
+    const subPath = decodeURIComponent(siteMatch[3] || "").replace(/\/+$/, "");
+    return { hostname: siteMatch[1], sitePath: "/sites/" + siteMatch[2], subPath: subPath || null, isSharingLink: false };
+  }
   return null;
 }
 
 /**
- * Fallback used when resolving via the sharing link itself (/shares) fails.
- * This can genuinely happen even when the exact same link opens fine in a
- * browser for the same person — some tenants apply stricter rules to
- * API/Graph-based access to a sharing link than to normal interactive
- * access. Resolving the SharePoint SITE directly and using its default
- * document library is a more standard, usually more reliable Graph call
- * that lines up with how interactive site access works.
- *
- * Caveat: this lands on the site's document library ROOT, which may be
- * broader (or in rare cases narrower) than whatever specific subfolder the
- * original sharing link pointed to — it's the best available fallback, not
- * a guaranteed exact match for the original link's target folder.
+ * Resolves a SharePoint site (and, if the URL includes one, a specific
+ * library/folder subpath within it) directly via Graph — the reliable path
+ * for a normal, navigable SharePoint URL like
+ * ".../sites/SiteName/Shared Documents" (as opposed to an opaque sharing
+ * link, which needs /shares instead — see resolveSharePointFolder below).
  */
 async function resolveSharePointFolderViaSite() {
   const parsed = parseSharePointSitePath(SHAREPOINT_FOLDER_URL);
-  if (!parsed) throw new Error("Could not parse a SharePoint site path from SHAREPOINT_FOLDER_URL to use as a fallback.");
+  if (!parsed) throw new Error("Could not parse a SharePoint site path from SHAREPOINT_FOLDER_URL.");
   const siteRes = await graphFetch(`/sites/${parsed.hostname}:${parsed.sitePath}`);
   const site = await siteRes.json();
-  const rootRes = await graphFetch(`/sites/${site.id}/drive/root`);
+
+  const rootPath = parsed.subPath
+    ? `/sites/${site.id}/drive/root:/${parsed.subPath.split("/").map(encodeURIComponent).join("/")}`
+    : `/sites/${site.id}/drive/root`;
+  const rootRes = await graphFetch(rootPath);
   const rootItem = await rootRes.json();
   return {
     driveId: rootItem.parentReference && rootItem.parentReference.driveId,
@@ -159,9 +169,24 @@ async function resolveSharePointFolderViaSite() {
   };
 }
 
+/**
+ * Resolves SHAREPOINT_FOLDER_URL to a real folder (driveId + itemId).
+ * - Opaque sharing links (":f:/s/...") are resolved via Graph's /shares
+ *   endpoint, since that's what it's actually for.
+ * - Normal, navigable site/library URLs (e.g. ".../sites/SiteName/Shared
+ *   Documents") skip /shares entirely and go straight to the more reliable
+ *   site-based resolution — /shares is built for opaque share tokens, not
+ *   plain URLs, so trying it first for a normal URL would just fail.
+ */
 async function resolveSharePointFolder() {
-  const encoded = encodeSharingUrl(SHAREPOINT_FOLDER_URL);
+  const parsed = parseSharePointSitePath(SHAREPOINT_FOLDER_URL);
+
+  if (parsed && !parsed.isSharingLink) {
+    return await resolveSharePointFolderViaSite();
+  }
+
   try {
+    const encoded = encodeSharingUrl(SHAREPOINT_FOLDER_URL);
     const res = await graphFetch(`/shares/${encoded}/driveItem`);
     const item = await res.json();
     return {
@@ -185,9 +210,9 @@ async function resolveSharePointFolder() {
         "the direct site lookup. This points to a real access/permissions issue " +
         "for the signed-in user on the SharePoint side, not something a further " +
         "code change here can fix. The exact link involved is:\n  " + SHAREPOINT_FOLDER_URL +
-        "\nCheck: does this account have real membership/access on the " +
-        "\"DigitalBanking\" SharePoint site itself (not just the sharing link)? " +
-        "An admin may need to add them as a site member or grant access directly.",
+        "\nCheck: does this account have real membership/access on this " +
+        "SharePoint site itself (not just the sharing link)? An admin may need " +
+        "to add them as a site member or grant access directly.",
         siteError
       );
       throw siteError;
@@ -239,28 +264,43 @@ function mapDriveItemToDoc(item, driveId, pillarCode, storyFolderName) {
  * (pillar folder → story folder → files), matching the docs/01-standards/
  * 1.1 .../ convention already used for the seed documents.
  */
+const MAX_FOLDER_DEPTH = 8; // safety cap against runaway recursion, not a real limit in practice
+
+/**
+ * Recursively walks every folder under the resolved root, at any depth —
+ * not just a fixed 2 levels. This matters because the real folder
+ * structure doesn't always match the "pillar folder / story folder / file"
+ * convention exactly; there can be extra wrapper folders in between (e.g.
+ * "Shared Documents" → "EAT" → "01-standards" → "1.1 Story Name" → file)
+ * that don't themselves match the pillar/story naming pattern. Whenever a
+ * folder name *does* match (e.g. "01-standards" or "1.1 Some Story"), that
+ * becomes the pillar/story context for every file found underneath it,
+ * however many extra wrapper folders are in between — folders that don't
+ * match just pass the current context through unchanged.
+ */
 async function listAllSharePointFiles(driveId, rootItemId) {
   const results = [];
-  const topLevel = await listSharePointChildren(driveId, rootItemId);
 
-  for (const entry of topLevel) {
-    if (entry.folder) {
-      const pillarCode = inferPillarCodeFromFolderName(entry.name);
-      const children = await listSharePointChildren(driveId, entry.id);
-      for (const child of children) {
-        if (!child.folder) {
-          results.push(mapDriveItemToDoc(child, driveId, pillarCode));
-        } else {
-          const grandchildren = await listSharePointChildren(driveId, child.id);
-          grandchildren.filter(g => !g.folder).forEach(g => {
-            results.push(mapDriveItemToDoc(g, driveId, pillarCode, child.name));
-          });
-        }
+  async function walk(itemId, pillarCode, storyName, depth) {
+    if (depth > MAX_FOLDER_DEPTH) return;
+    const children = await listSharePointChildren(driveId, itemId);
+    for (const child of children) {
+      if (!child.folder) {
+        results.push(mapDriveItemToDoc(child, driveId, pillarCode, storyName));
+        continue;
       }
-    } else {
-      results.push(mapDriveItemToDoc(entry, driveId, null));
+      const inferredPillar = inferPillarCodeFromFolderName(child.name);
+      const inferredStory = /^\d+\.\d+/.test(child.name) ? child.name : null;
+      await walk(
+        child.id,
+        inferredPillar || pillarCode,
+        inferredStory || storyName,
+        depth + 1
+      );
     }
   }
+
+  await walk(rootItemId, null, null, 0);
   return results;
 }
 
