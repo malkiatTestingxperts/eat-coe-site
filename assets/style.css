@@ -659,7 +659,7 @@ p {
 .story {
   font-size: 13.5px;
   color: #3c4d54;
-  margin: 0 0 14px
+  margin-top: 2px
 }
 
 .area-meta {
@@ -2396,4 +2396,15 @@ body.role-contributor .viewer-only {
   .topbar {
     padding: 12px 20px
   }
+}
+
+.reg-send-btn,
+#sendBtn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 12px;
+  min-width: 90px;
+  padding: 8px 18px;
+  font-size: 14px;
+  white-space: nowrap;
 }

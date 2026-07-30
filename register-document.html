@@ -65,7 +65,8 @@
       <div class="callout" style="margin-top:0">
         <h4>How this works</h4>
         <p>This page cannot upload files directly (that needs SharePoint sign-in, which isn't connected yet). Instead:
-          fill in the details below, click <b>📎 Choose file</b> to attach it from your computer, then hit <b>📧 Send</b>
+          fill in the details below, click <b>📎 Choose file</b> to attach it from your computer, then hit <b>📧
+            Send</b>
           — your email app opens with everything pre-filled, including the file name as a reminder. Just attach the
           file you picked (browsers can't do this step automatically) and hit send in your email app. The COE team
           files it into the right SharePoint folder based on the pillar/labels you chose.</p>
@@ -75,12 +76,12 @@
         <div class="card">
           <form id="docRegisterForm">
             <div class="reg-field">
-              <label>Your name <span class="reg-optional">(from your Microsoft sign-in)</span></label>
-              <input type="text" id="rfName" placeholder="Jordan Patel">
+              <label>Your name</label>
+              <input type="text" id="rfName" placeholder="Malkiat Singh">
             </div>
             <div class="reg-field">
-              <label>Your email <span class="reg-optional">(from your Microsoft sign-in)</span></label>
-              <input type="email" id="rfEmail" placeholder="jordan.patel@company.com">
+              <label>Your email <span class="reg-optional">(optional, helps us reply)</span></label>
+              <input type="email" id="rfEmail" placeholder="malkiat.singh@company.com">
             </div>
             <div class="reg-field">
               <label>Document name</label>
@@ -88,7 +89,8 @@
             </div>
             <div class="reg-field">
               <label>Description <span class="reg-optional">(optional)</span></label>
-              <textarea id="rfDescription" rows="3" placeholder="What is this document and why does it belong in the repository?"></textarea>
+              <textarea id="rfDescription" rows="3"
+                placeholder="What is this document and why does it belong in the repository?"></textarea>
             </div>
             <div class="reg-field-row">
               <div class="reg-field">
@@ -104,24 +106,42 @@
               </div>
               <div class="reg-field">
                 <label>Related story <span class="reg-optional">(optional)</span></label>
-                <select id="rfStory"><option value="">No specific story</option></select>
+                <select id="rfStory">
+                  <option value="">No specific story</option>
+                </select>
               </div>
             </div>
             <div class="reg-field">
-              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right folder)</span></label>
+              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right
+                  folder)</span></label>
               <input type="text" id="rfTags" placeholder="e.g. automation, regression, checklist">
             </div>
             <div class="reg-field">
               <label>Attach a file</label>
               <div class="reg-file-row">
-                <label class="signin-btn reg-attach-btn" for="rfFile" style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
+                <label class="signin-btn reg-attach-btn" for="rfFile"
+                  style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
                 <input type="file" id="rfFile" style="display:none">
                 <span id="rfFileName" class="reg-filename"></span>
-                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn" style="background:var(--teal);color:#fff">📧 Send</button>
+                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn"
+                  style="background:var(--teal);color:#fff">📧 Send</button>
               </div>
-              <p class="uf-note" style="margin-top:10px">Sending opens your email app with everything pre-filled — just attach the file you picked above (browsers can't attach it automatically) and hit send in your email app.</p>
             </div>
           </form>
+        </div>
+        <div class="card email-preview" id="emailPreview">
+          <h4>Email preview</h4>
+          <div class="ep-field"><span>To</span><span id="epTo"></span></div>
+          <div class="ep-field"><span>Subject</span><span class="ep-subject"></span></div>
+          <pre class="ep-body"></pre>
+          <div class="reg-actions">
+            <a id="mailtoBtn" class="signin-btn" style="background:var(--teal);color:#fff" href="#">📧 Open Email to
+              Send</a>
+            <button type="button" id="copyBtn" class="signout-btn"
+              style="border-color:var(--border);color:var(--ink)">📋 Copy email content</button>
+          </div>
+          <p class="uf-note" style="margin-top:10px">Remember: attach your file in your email app before sending — a
+            webpage can't attach it for you.</p>
         </div>
       </div>
 
