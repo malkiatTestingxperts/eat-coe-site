@@ -36,7 +36,13 @@ function encodeSharingUrl(url) {
 }
 
 /* ---------------- token + fetch helpers ---------------- */
-const GRAPH_CONSENT_ATTEMPTED_KEY = "eatcoe_graph_consent_attempted"; // localStorage: forever, across tabs/sessions
+// Keyed to the specific scope set, not just a flat flag — otherwise, if the
+// requested scopes ever change (like just now, dropping the admin-gated
+// .All scopes for plain Files.Read), a stale "already tried and failed"
+// flag from the OLD scope set would permanently block the NEW one from
+// ever being attempted, even though it's a totally different permission.
+const GRAPH_CONSENT_ATTEMPTED_KEY =
+  "eatcoe_graph_consent_attempted:" + GRAPH_SCOPES.slice().sort().join(",");
 
 /**
  * Token acquisition for Graph calls. Always tries silently first (if a
@@ -321,5 +327,27 @@ async function initGraphCatalog() {
     await loadGraphCatalog();
   } catch (e) {
     console.warn("Could not load the live SharePoint catalog via Microsoft Graph — using the built-in document list instead.", e);
+  }
+}
+
+/**
+ * Diagnostic helper, callable from the browser console:
+ *   retryGraphConnection()
+ * Clears the cached "already tried" flag and the folder/file listing
+ * cache, then immediately retries connecting to SharePoint and reports
+ * exactly what happened — useful for checking the real cause without
+ * waiting for a full page reload or digging through console warnings.
+ */
+async function retryGraphConnection() {
+  try { localStorage.removeItem(GRAPH_CONSENT_ATTEMPTED_KEY); } catch (e) { /* ignore */ }
+  try { sessionStorage.removeItem(GRAPH_CACHE_KEY); } catch (e) { /* ignore */ }
+  console.log("Retrying Microsoft Graph connection with a clean slate...");
+  try {
+    const docs = await loadGraphCatalog({ forceRefresh: true });
+    console.log("✅ Success — loaded", docs.length, "real document(s) from SharePoint:", docs);
+    return docs;
+  } catch (e) {
+    console.error("❌ Still failed. Full error below — this is the real cause:", e);
+    throw e;
   }
 }

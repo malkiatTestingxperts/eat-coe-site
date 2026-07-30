@@ -48,8 +48,11 @@
           <a href="sitemap.html">Full Sitemap</a>
         </div>
       </div>
-      <!-- No login button on Home: this page is only ever reached after
-           signing in on login.html, so there's nothing to show here. -->
+      <!-- Home is only ever reached after signing in on login.html, so this
+           will only ever render "Log Out" here, never a "Log In" prompt. -->
+      <div class="role-switcher">
+        <div id="authBox"></div>
+      </div>
     </nav>
   </header>
   <section class="hero">
