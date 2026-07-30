@@ -10,7 +10,18 @@
    ========================================================================== */
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
-const GRAPH_SCOPES = ["User.Read", "Sites.ReadWrite.All", "Files.ReadWrite.All"];
+// Files.Read (no ".All") is a low-privilege delegated scope scoped to files
+// the signed-in user can already access — per Microsoft's own permissions
+// reference this does NOT require admin consent, unlike Sites.ReadWrite.All /
+// Files.ReadWrite.All (tenant-wide, "Yes" for admin consent required), which
+// this used to request and which triggered a blocking "Approval required"
+// screen on every attempt in tenants that require admin approval for those.
+// Everything this file currently does — resolving the shared folder link,
+// listing its contents, and downloading files — is read-only, so this is
+// enough. Real upload (see uploadFileToSharePoint below) needs write access
+// and isn't wired to any button yet; add "Files.ReadWrite" (also no admin
+// consent required per Microsoft's docs) to this list if that's ever wired up.
+const GRAPH_SCOPES = ["User.Read", "Files.Read"];
 const GRAPH_CACHE_KEY = "eatcoe_graph_folder_cache";
 const GRAPH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — avoid hammering Graph on every page load
 const MAX_AUTO_INDEX_FILES = 25; // cap background full-text extraction per session
@@ -25,43 +36,62 @@ function encodeSharingUrl(url) {
 }
 
 /* ---------------- token + fetch helpers ---------------- */
-const GRAPH_CONSENT_FLAG_KEY = "eatcoe_graph_consent_pending";
+const GRAPH_CONSENT_ATTEMPTED_KEY = "eatcoe_graph_consent_attempted"; // localStorage: forever, across tabs/sessions
 
 /**
- * Silent-only token acquisition for background/automatic Graph calls
- * (loading the live document catalog, background indexing, etc). This
- * deliberately never opens an interactive popup: some tenants require an
- * admin to explicitly approve permissions like Sites.ReadWrite.All /
- * Files.ReadWrite.All, and a regular user clicking through that popup can't
- * actually grant it — so popping it up automatically on every page
- * navigation just interrupts the user with a dead end, over and over.
- * Instead: try silently once, and if it fails, remember that for the rest
- * of this browser session (sessionStorage) so we don't even retry it on
- * every click — the site just keeps using the built-in document list until
- * a real grant exists (e.g. after an admin approves it) and a fresh page
- * load succeeds silently.
+ * Token acquisition for Graph calls. Always tries silently first (if a
+ * grant already exists, this never shows any UI, on any page, ever).
+ *
+ * The *very first time* silent acquisition fails (meaning this scope has
+ * never been consented on this device at all), it allows exactly ONE
+ * interactive popup attempt to complete that initial consent — this is
+ * normal and expected for a low-privilege scope like Files.Read, which
+ * Microsoft's own docs list as not requiring admin approval, so that one
+ * popup should just show a normal "Accept" button, not an approval-request
+ * dead end. Either way — success, cancellation, or an unexpected admin
+ * approval requirement — that one attempt is remembered permanently
+ * (localStorage, not just this tab), so it's never retried automatically
+ * again. If something changes (an admin grants access later, permissions
+ * are updated, etc.), clear `eatcoe_graph_consent_attempted` from
+ * localStorage (or a different browser/profile) to let it try again.
  */
 async function getGraphToken() {
   if (typeof msalInstance === "undefined" || !msalInstance) throw new Error("MSAL is not initialized (SSO not configured).");
-  if (sessionStorage.getItem(GRAPH_CONSENT_FLAG_KEY) === "1") {
-    throw new Error("Skipping Graph — consent for Sites/Files permissions is still pending (cached this session; will retry on next full page load).");
-  }
   if (typeof msalReady !== "undefined") await msalReady;
   const account = (typeof getActiveAccount === "function") ? getActiveAccount() : null;
   if (!account) throw new Error("Not signed in.");
   const request = { scopes: GRAPH_SCOPES, account };
+
   try {
     const result = await msalInstance.acquireTokenSilent(request);
     return result.accessToken;
-  } catch (e) {
-    console.warn(
-      "Silent Graph token acquisition failed — likely still pending admin " +
-      "approval for Sites.ReadWrite.All / Files.ReadWrite.All in Entra ID. " +
-      "Not showing an interactive popup for this automatically; falling back " +
-      "to the built-in document list for the rest of this session.", e
-    );
-    try { sessionStorage.setItem(GRAPH_CONSENT_FLAG_KEY, "1"); } catch (e2) { /* ignore */ }
-    throw e;
+  } catch (silentError) {
+    let alreadyAttempted = false;
+    try { alreadyAttempted = localStorage.getItem(GRAPH_CONSENT_ATTEMPTED_KEY) === "1"; } catch (e) { /* ignore */ }
+
+    if (alreadyAttempted) {
+      console.warn(
+        "Silent Graph token acquisition failed, and the one-time interactive " +
+        "consent attempt already happened previously on this device — not " +
+        "asking again automatically. Falling back to the built-in document " +
+        "list. Clear localStorage's \"" + GRAPH_CONSENT_ATTEMPTED_KEY + "\" " +
+        "key to allow one more attempt.", silentError
+      );
+      throw silentError;
+    }
+
+    try { localStorage.setItem(GRAPH_CONSENT_ATTEMPTED_KEY, "1"); } catch (e) { /* ignore */ }
+    try {
+      const result = await msalInstance.acquireTokenPopup(request);
+      return result.accessToken;
+    } catch (popupError) {
+      console.warn(
+        "The one-time interactive Graph consent attempt failed or was " +
+        "cancelled — not asking again automatically going forward. Falling " +
+        "back to the built-in document list.", popupError
+      );
+      throw popupError;
+    }
   }
 }
 
@@ -226,6 +256,12 @@ async function downloadGraphItem(doc) {
  * Not currently wired to a button (Register a Document intentionally sends
  * an email per the current requirements) — available for whenever real
  * in-browser upload is wanted instead of/alongside the email flow.
+ *
+ * NOTE: this needs write access, which GRAPH_SCOPES no longer requests (it's
+ * read-only now, specifically to avoid the admin-consent prompt — see the
+ * comment on GRAPH_SCOPES above). Add "Files.ReadWrite" to GRAPH_SCOPES
+ * before wiring this up to anything — that scope is still "No" for admin
+ * consent required per Microsoft's docs, same as Files.Read.
  */
 async function uploadFileToSharePoint(file, pillarCode) {
   const folder = await resolveSharePointFolder();
