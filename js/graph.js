@@ -233,6 +233,23 @@ async function loadGraphCatalog({ forceRefresh = false } = {}) {
   return docs;
 }
 
+/**
+ * Given a placeholder document (seed catalog entry, no real driveId/itemId
+ * yet), tries to find the matching real file in the live SharePoint
+ * listing by name, loading that listing first if it isn't already cached.
+ * Returns the real Graph-sourced document object (with a working
+ * downloadUrl/driveId/itemId) if found, otherwise null — callers should
+ * fall back to the old generic-folder-link behavior in that case.
+ */
+async function findRealDocumentByName(name) {
+  let docs = (typeof GRAPH_DOCS !== "undefined" && GRAPH_DOCS && GRAPH_DOCS.length) ? GRAPH_DOCS : null;
+  if (!docs) {
+    docs = await loadGraphCatalog();
+  }
+  const target = (name || "").trim().toLowerCase();
+  return docs.find(d => (d.name || "").trim().toLowerCase() === target) || null;
+}
+
 /* ---------------- real download ---------------- */
 async function downloadGraphItem(doc) {
   let url = doc.downloadUrl;

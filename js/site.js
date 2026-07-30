@@ -1165,11 +1165,14 @@ function updateDocTags(doc, newTags) {
 }
 
 /**
- * "View" — opens the document's actual content in a new tab (via
- * viewGraphItem, see js/graph.js) for real SharePoint-sourced documents.
- * Falls back to opening doc.url (or the shared folder link) for anything
- * without real Graph-fetchable bytes yet (seed/pending entries, or if the
- * Graph fetch fails for any reason) — same fail-safe pattern as Download.
+ * "View" — opens the document's actual content in a new tab.
+ * - Real Graph-sourced documents: opens the cached signed URL directly, or
+ *   (rarer) fetches a fresh one via viewGraphItem.
+ * - Seed/placeholder documents (no real driveId/itemId yet): tries to find
+ *   the matching real file in the live SharePoint listing by name (see
+ *   findRealDocumentByName in js/graph.js) and opens that instead.
+ * - Falls back to the generic shared folder link only if none of the above
+ *   works (Graph unavailable, no match found, etc).
  */
 async function openDocument(doc) {
   bumpDownload(doc.id);
@@ -1187,23 +1190,44 @@ async function openDocument(doc) {
     return;
   }
 
+  // Everything below needs at least one async Graph call, so open the
+  // destination tab synchronously right now (before any await) to keep the
+  // click's user-gesture — whichever path below ends up filling it in.
+  const win = window.open("", "_blank");
+
   if (doc.sourceType === "graph" && typeof viewGraphItem === "function") {
-    // Rarer case: no cached URL yet, need one more Graph call first. Open
-    // a blank tab synchronously (before any await) to preserve the click's
-    // user-gesture, then navigate it once viewGraphItem resolves.
-    const win = window.open("", "_blank");
     if (win) {
       try {
         await viewGraphItem(doc, win);
         return;
       } catch (e) {
         console.error("Could not open the live SharePoint file inline, falling back to its SharePoint page:", e);
-        try { win.close(); } catch (e2) { /* ignore */ }
       }
+    }
+  } else if (typeof findRealDocumentByName === "function") {
+    try {
+      const real = await findRealDocumentByName(doc.name);
+      if (real) {
+        if (real.downloadUrl && win) {
+          win.location.href = real.downloadUrl;
+          return;
+        }
+        if (win && typeof viewGraphItem === "function") {
+          await viewGraphItem(real, win);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Could not find the real SharePoint file for \"" + doc.name + "\", falling back to the shared folder:", e);
     }
   }
 
-  window.open(doc.url || SHAREPOINT_FOLDER_URL, "_blank", "noopener");
+  const fallbackUrl = doc.url || SHAREPOINT_FOLDER_URL;
+  if (win) {
+    win.location.href = fallbackUrl;
+  } else {
+    window.open(fallbackUrl, "_blank", "noopener");
+  }
 }
 
 /**
@@ -1211,11 +1235,15 @@ async function openDocument(doc) {
  * - Graph-sourced documents (real SharePoint files, doc.sourceType==="graph"):
  *   fetches the real file bytes via Microsoft Graph and downloads them for
  *   real — see downloadGraphItem() in js/graph.js.
+ * - Seed/placeholder documents (no real driveId/itemId yet): tries to find
+ *   the matching real file in the live SharePoint listing by name first
+ *   (see findRealDocumentByName in js/graph.js), and downloads that for
+ *   real if found.
  * - Documents uploaded through this site's old local-demo storage (if any
  *   remain from before Graph was connected) still download from their saved
  *   base64 bytes.
- * - Anything else (seed docs before Graph was connected, or if the Graph
- *   download fails for any reason) falls back to opening SharePoint.
+ * - Anything else (Graph unavailable, no match found, etc) falls back to
+ *   opening the generic shared folder link.
  */
 async function downloadDocument(doc) {
   logActivity("download", doc.name);
@@ -1227,6 +1255,16 @@ async function downloadDocument(doc) {
       return;
     } catch (e) {
       console.error("Microsoft Graph download failed, falling back to SharePoint link:", e);
+    }
+  } else if (typeof findRealDocumentByName === "function" && !doc.fileData) {
+    try {
+      const real = await findRealDocumentByName(doc.name);
+      if (real && typeof downloadGraphItem === "function") {
+        await downloadGraphItem(real);
+        return;
+      }
+    } catch (e) {
+      console.error("Could not find the real SharePoint file for \"" + doc.name + "\", falling back to SharePoint link:", e);
     }
   }
 
@@ -1460,14 +1498,12 @@ function renderDocumentsPage() {
 function docRowHtml(d) {
   const canManage = d.sourceType === "user";
   const isPending = d.sourceType === "pending";
-  const canRealDownload = !!d.fileData || d.sourceType === "graph";
   let indexBadge = "";
   if (d.fullText) {
     indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
-  const sharePointOnlyTag = (canRealDownload || isPending) ? "" : '<span class="sso-note">(SharePoint only)</span>';
   const pendingTag = isPending ? '<span class="type-badge document" title="Attached on the Register a Document page — not yet emailed">📋 pending submission</span>' : "";
   const actions = isPending
     ? `<span class="sso-note">Fill out and send the form above to submit this ↑</span>`
@@ -1477,7 +1513,7 @@ function docRowHtml(d) {
   return `
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
-        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${sharePointOnlyTag}${pendingTag} ${indexBadge}</div>
+        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
         ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
