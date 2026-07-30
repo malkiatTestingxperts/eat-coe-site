@@ -45,8 +45,16 @@ const SSO_ENABLED =
 const REQUIRE_SIGNIN = true;
 
 let msalInstance = null;
+// MSAL Browser v3+ requires calling and awaiting initialize() before any
+// other API (loginPopup, acquireTokenSilent, handleRedirectPromise, etc.)
+// — skipping this throws "uninitialized_public_client_application". Every
+// function below that touches msalInstance awaits this first.
+let msalReady = Promise.resolve();
 if (SSO_ENABLED) {
   msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+  msalReady = msalInstance.initialize().catch(e => {
+    console.error("MSAL initialize() failed:", e);
+  });
 }
 
 function getActiveAccount() {
@@ -68,6 +76,7 @@ async function signIn() {
   }
   if (!msalInstance) return;
   try {
+    await msalReady;
     const result = await msalInstance.loginPopup({ scopes: ["User.Read"] });
     msalInstance.setActiveAccount(result.account);
     onSignedIn(result.account);
@@ -102,6 +111,12 @@ async function signIn() {
         "\n\nThis usually means the app needs admin consent for the requested " +
         "permissions. Ask your Entra ID admin to grant admin consent in " +
         "Entra ID → App registrations → this app → API permissions.";
+    } else if (/uninitialized_public_client_application/i.test(errorCode) || /initialize/i.test(errorMessage)) {
+      hint =
+        "\n\nThis means MSAL's own startup step failed silently earlier — " +
+        "check the browser console right after the page loads (before " +
+        "clicking Log In) for a \"MSAL initialize() failed\" message, which " +
+        "will have the real underlying cause.";
     }
 
     alert(
@@ -117,6 +132,7 @@ async function signOut() {
   if (!msalInstance) return;
   const account = getActiveAccount();
   try {
+    await msalReady;
     await msalInstance.logoutPopup({ account });
   } catch (e) {
     console.error("Sign-out failed:", e);
@@ -205,6 +221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
   try {
+    await msalReady;
     await msalInstance.handleRedirectPromise();
   } catch (e) {
     console.error("MSAL redirect handling failed:", e);
