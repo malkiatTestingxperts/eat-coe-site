@@ -22,6 +22,7 @@
   --ink: #16262b;
   --text-mute: #5B6B76;
   --border: #e3e8ea;
+  --white: #FFFFFF;
   --radius: 14px;
   --font-body: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
@@ -1174,7 +1175,7 @@ body.login-page {
 }
 
 .login-card {
-  background: var(--text-mute);
+  background: var(--white);
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 18px;
   padding: 48px 46px;
