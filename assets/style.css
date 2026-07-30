@@ -9,6 +9,7 @@
   --dark-bg-alt: #1b2f35;
   /* panels on dark */
   --teal: #29c5d6;
+  --royal-blue-dark: #1F3A93;
   /* accent cyan (replaces old #1F8A70) */
   --teal-dark: #1fa3b3;
   /* hover / darker accent */
@@ -2412,10 +2413,10 @@ body.role-contributor .viewer-only {
 }
 
 .login-heading {
-  color: var(--dark-bg-alt);
+  color: var(--royal-blue-dark);
 }
 
 
 .sso-note.login-note {
-  color: var(--dark-bg-alt);
+  color: var(--royal-blue-dark);
 }
