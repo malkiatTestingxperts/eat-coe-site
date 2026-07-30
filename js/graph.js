@@ -137,7 +137,20 @@ function parseSharePointSitePath(url) {
   }
   const siteMatch = /^https:\/\/([^/]+)\/sites\/([^/]+)\/?(.*)$/i.exec(url);
   if (siteMatch) {
-    const subPath = decodeURIComponent(siteMatch[3] || "").replace(/\/+$/, "");
+    let subPath = decodeURIComponent(siteMatch[3] || "").replace(/\/+$/, "");
+    // The path segment right after the site name is normally the document
+    // library's display name, not a subfolder. For the default library
+    // ("Shared Documents" / "Documents" in English tenants), that name IS
+    // the drive's root itself — there's no actual folder with that name
+    // living inside it, so treating it as one produces a 404 itemNotFound.
+    // Strip it off; keep anything genuinely deeper (e.g. an "EAT" folder
+    // inside it) as the real subpath to navigate to.
+    const DEFAULT_LIBRARY_NAMES = ["shared documents", "documents"];
+    const segments = subPath.split("/").filter(Boolean);
+    if (segments.length && DEFAULT_LIBRARY_NAMES.includes(segments[0].toLowerCase())) {
+      segments.shift();
+    }
+    subPath = segments.join("/");
     return { hostname: siteMatch[1], sitePath: "/sites/" + siteMatch[2], subPath: subPath || null, isSharingLink: false };
   }
   return null;
