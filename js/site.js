@@ -10,7 +10,7 @@
    to make the catalog shared across everyone using a free backend.
    ========================================================================== */
 
-const SHAREPOINT_FOLDER_URL = "https://txplin.sharepoint.com/sites/EnterpriseApplicationTesting-EAT/Shared Documents";//"https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP";
+const SHAREPOINT_FOLDER_URL = "https://txplin.sharepoint.com/sites/EnterpriseApplicationTesting-EAT/Shared Documents";
 
 const STORIES = [
   {
@@ -1165,12 +1165,20 @@ function updateDocTags(doc, newTags) {
 }
 
 /**
- * "View" — opens the document's actual content in a new tab.
- * - Real Graph-sourced documents: opens the cached signed URL directly, or
- *   (rarer) fetches a fresh one via viewGraphItem.
+ * "View" — opens the document's own SharePoint page in a new tab, the same
+ * way the chatbot's links already do. This intentionally uses doc.url
+ * (SharePoint's webUrl for the item) rather than doc.downloadUrl: Graph's
+ * raw download link is specifically designed to force a download
+ * (Content-Disposition: attachment), not display content — using it here
+ * was why View opened the right tab but did the wrong thing inside it.
+ * SharePoint's own page uses Office Online / its native viewer, which
+ * actually shows the document.
+ * - Real Graph-sourced documents: doc.url is already known from the
+ *   listing and never expires, so this opens synchronously, no async
+ *   Graph call needed.
  * - Seed/placeholder documents (no real driveId/itemId yet): tries to find
  *   the matching real file in the live SharePoint listing by name (see
- *   findRealDocumentByName in js/graph.js) and opens that instead.
+ *   findRealDocumentByName in js/graph.js) and opens its real page instead.
  * - Falls back to the generic shared folder link only if none of the above
  *   works (Graph unavailable, no match found, etc).
  */
@@ -1178,44 +1186,23 @@ async function openDocument(doc) {
   bumpDownload(doc.id);
   logActivity("view", doc.name);
 
-  if (doc.sourceType === "graph" && doc.downloadUrl) {
-    // Common case: we already have a real, signed content URL cached from
-    // the file listing. Open it directly and synchronously — a normal
-    // window.open with a real URL is never blocked as a popup, and letting
-    // the browser's own navigation fetch it (rather than us fetching bytes
-    // via JS first) avoids a real Chromium restriction where an
-    // intervening cross-origin fetch() silently blocks later attempts to
-    // navigate another window.
-    window.open(doc.downloadUrl, "_blank", "noopener");
+  if (doc.sourceType === "graph" && doc.url) {
+    window.open(doc.url, "_blank", "noopener");
     return;
   }
 
-  // Everything below needs at least one async Graph call, so open the
-  // destination tab synchronously right now (before any await) to keep the
-  // click's user-gesture — whichever path below ends up filling it in.
+  // Seed/placeholder entry — the real file isn't known yet, so this needs
+  // an async Graph lookup. Open the destination tab synchronously now
+  // (before that lookup) to preserve the click's user-gesture, then
+  // navigate it once resolved.
   const win = window.open("", "_blank");
 
-  if (doc.sourceType === "graph" && typeof viewGraphItem === "function") {
-    if (win) {
-      try {
-        await viewGraphItem(doc, win);
-        return;
-      } catch (e) {
-        console.error("Could not open the live SharePoint file inline, falling back to its SharePoint page:", e);
-      }
-    }
-  } else if (typeof findRealDocumentByName === "function") {
+  if (typeof findRealDocumentByName === "function") {
     try {
       const real = await findRealDocumentByName(doc.name);
-      if (real) {
-        if (real.downloadUrl && win) {
-          win.location.href = real.downloadUrl;
-          return;
-        }
-        if (win && typeof viewGraphItem === "function") {
-          await viewGraphItem(real, win);
-          return;
-        }
+      if (real && real.url && win) {
+        win.location.href = real.url;
+        return;
       }
     } catch (e) {
       console.error("Could not find the real SharePoint file for \"" + doc.name + "\", falling back to the shared folder:", e);

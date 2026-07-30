@@ -389,37 +389,6 @@ async function downloadGraphItem(doc) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
 }
 
-/**
- * Navigates an already-open window straight to the document's real,
- * pre-authenticated content URL — used as a fallback when we don't already
- * have doc.downloadUrl cached (see openDocument() in site.js, which handles
- * the common case of an already-cached URL by opening it directly, with no
- * async step at all).
- *
- * This deliberately does NOT fetch the bytes itself and build a blob: URL.
- * That was tried first, but browsers (Chromium at least) silently refuse to
- * navigate another window via `.location.href` once the user-gesture that
- * opened it has been "spent" by an intervening cross-origin fetch() — the
- * navigation call doesn't error, it just does nothing. Handing the browser
- * the real URL directly and letting its own navigation fetch it sidesteps
- * that restriction entirely (this is exactly what a normal link click
- * does), at the cost of not being able to guarantee inline rendering vs.
- * download the way a blob: URL would — that now depends on whatever
- * Content-Disposition SharePoint's own download URL returns for the file
- * type, same as clicking a raw file link anywhere else.
- *
- * IMPORTANT: `targetWindow` must already be open (e.g. `window.open("",
- * "_blank")`, called synchronously by the caller, before any `await`).
- */
-async function viewGraphItem(doc, targetWindow) {
-  if (!targetWindow) throw new Error("No target window provided — it must be opened synchronously by the caller before calling this.");
-  const res = await graphFetch(`/drives/${doc.driveId}/items/${doc.itemId}`);
-  const item = await res.json();
-  const url = item["@microsoft.graph.downloadUrl"];
-  if (!url) throw new Error("No content URL available for " + doc.name);
-  targetWindow.location.href = url;
-}
-
 /* ---------------- real upload ----------------
  * Simple upload (fine up to 4MB — larger files need Graph's chunked
  * upload-session API instead). Uploads to the pillar subfolder if one
