@@ -178,7 +178,28 @@ function isLoginPage() {
   return /(^|\/)login\.html$/.test(window.location.pathname);
 }
 
+/**
+ * True when this window IS the transient popup MSAL opened for sign-in
+ * (or sign-out), briefly loading the redirect URI just to hand the auth
+ * response back to the window that opened it. If we let our own app logic
+ * (in particular, the "redirect to login.html if not signed in yet" gate
+ * below) run in that popup, it can navigate the popup away before MSAL's
+ * own polling in the *opener* window gets a chance to read the response
+ * and close the popup — which looks like sign-in "looping" back to the
+ * login page instead of completing. So: if we're in that popup, do nothing
+ * at all here and let MSAL handle it.
+ */
+function isMsalPopup() {
+  try {
+    return !!(window.opener && window.opener !== window && !window.opener.closed);
+  } catch (e) {
+    return false;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  if (isMsalPopup()) return;
+
   if (!SSO_ENABLED) {
     renderAuthUI();
     return;
