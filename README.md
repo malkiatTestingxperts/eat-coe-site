@@ -1,134 +1,123 @@
-# EAT COE — Enterprise Application Testing Center of Excellence
+# TREAT COE — Tx's Repository For Enterprise Applications Testing
 
-A fully static website (HTML/CSS/JS, no server, no build step, no signup).
-All 29 deliverables plus a document catalog are embedded in `js/site.js`.
+A static website (HTML/CSS/JS) with real Microsoft SSO and a real, live
+Microsoft Graph integration to your SharePoint/Teams document library.
 
-## What's new in this version
+## How access works
 
-- **Dropdown navigation**: Home is a direct link; About / Pillars / Documents /
-  Dashboard each open a dropdown of related pages.
-- **A single "Log In" button** in the header — no manual Viewer/Contributor
-  dropdown, no typed-in name. Signed out = read-only Viewer. Signed in with
-  Microsoft = Contributor (upload, tag, edit story status). See "SSO login"
-  below for exactly how signing in works and what it does/doesn't enforce.
-- **Real upload and download, right now, no backend.** "Upload a document"
-  (on `documents.html` or any pillar/story page, Contributor only) takes an
-  actual file, stores it in your browser (up to 4MB), and the **Download**
-  button on that document genuinely downloads those exact bytes back out —
-  tested end-to-end. There's also always a **View in SharePoint** button that
-  opens the real shared folder:
-  ```
-  https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84
-  ```
-  The 8 pre-loaded documents don't have local bytes (they're real existing
-  SharePoint files), so their Download button currently opens SharePoint too
-  — only documents *uploaded through this site* download for real today.
-  Once Graph API is connected (see below), `registerDocument()` and
-  `downloadDocument()` in `js/site.js` are the only two functions that need
-  to change — from browser storage to a real SharePoint upload/download call
-  — the buttons and forms stay exactly as they are.
-- **Progress/status now lives only on the Dashboard.** Pillar and story pages
-  show story content, owner, acceptance criteria, and linked documents — no
-  status chips. The Dashboard has a story-level table where Contributors can
-  update status inline.
-- **Dashboard metrics**: total documents in the catalog, total opens, active
-  contributors, and a 7-day activity tracker + log.
-- **Home page** is now a brief intro + Quick Links (Featured / Most Downloaded
-  / Recently Modified documents) + the five pillar cards. The old long
-  "What EAT is" writeup moved to its own **About** page.
-- **Unified search** (hero search bar + chatbot) now searches both stories
-  and documents, and results are labeled with a Story/Document badge.
+- **login.html** is the only entry point for anyone not signed in. Visiting
+  *any* other page while signed out redirects here automatically.
+- Signing in with a Microsoft work account (via MSAL.js) sends you straight
+  to **index.html** (Home) — which has no login button at all, since you can
+  only ever reach it already authenticated.
+- Everyone who successfully signs in is currently treated as a Contributor
+  (can edit tags, update story status). This is **not yet tied to real
+  SharePoint permissions** — see "Going further" below if you want that.
+- Real credentials are already in place in `js/auth.js`:
+  - Client ID: `9a817d03-ec3b-4e4f-8fa6-b7278cab47fe`
+  - Tenant ID: `d7e861c9-d924-4413-86db-05780e928657`
+  - If sign-in ever needs to be turned off site-wide, set
+    `REQUIRE_SIGNIN = false` near the top of `js/auth.js`.
 
-## SSO login (Microsoft sign-in)
+## The live document catalog (Microsoft Graph)
 
-One **Log In** button in the header, using Microsoft sign-in (MSAL.js) — no
-separate password, no new signup, just an existing Microsoft 365 account.
-Signing in does two things: it shows the person's real name instead of
-"Guest", and it grants Contributor access (upload/tag/status-edit). Signing
-out (or never signing in) leaves someone as a read-only Viewer. There's no
-separate role dropdown anymore — Log In *is* the role switch.
+Once signed in, `js/graph.js` does the following automatically:
+1. Resolves the shared SharePoint folder link (`SHAREPOINT_FOLDER_URL` in
+   `js/site.js`) to a real drive/folder via Graph's `/shares` endpoint.
+2. Lists real files under it (up to two folder levels deep, matching the
+   `01-standards / 1.1 Story Name / file.docx` convention).
+3. Replaces the built-in seed document list with this live listing
+   everywhere — Documents page, pillar/story pages, Quick Links, search,
+   the chatbot, and Dashboard metrics.
+4. In the background, downloads and text-indexes every PDF/.docx/.txt/.md
+   file it found (capped at 25 files per session — see
+   `MAX_AUTO_INDEX_FILES` in `js/graph.js`) using PDF.js/Mammoth.js, so the
+   main search bar and chatbot can match **text inside the documents**, not
+   just their file names.
+5. If any of this fails for any reason (Graph scopes not consented yet,
+   offline, folder not resolvable) it fails silently and the site falls back
+   to the built-in seed document list — nothing breaks either way.
 
-### Turning it on
-1. Ask your Entra ID admin to register the site:
-   - Azure Portal → **Entra ID → App registrations → New registration**
-   - Single-tenant, Platform = **Single-page application (SPA)**
-   - Redirect URI = the site's real URL (e.g. `https://you.github.io/eat-coe-site/`)
-   - **API permissions** → Microsoft Graph → Delegated → `User.Read` → **Grant admin consent**
-   - Copy the **Application (client) ID** and **Directory (tenant) ID**
-2. Open `js/auth.js` and replace the two placeholders near the top:
-   ```js
-   clientId: "PASTE-YOUR-CLIENT-ID-HERE",
-   authority: "https://login.microsoftonline.com/PASTE-YOUR-TENANT-ID-HERE",
-   ```
-3. That's it — reload the site. Until both placeholders are replaced, the
-   Log In button still shows (so you can see the UI), but clicking it just
-   explains what's still needed instead of doing anything — nothing is ever
-   half-broken.
+This is cached in `sessionStorage` for 5 minutes (`GRAPH_CACHE_TTL_MS`) to
+avoid re-listing the whole folder on every page load.
 
-### Behavior once enabled
-- Visitors see a "Log In" gate before the content is usable (blurred
-  background + button). Set `REQUIRE_SIGNIN = false` near the top of
-  `js/auth.js` if you'd rather make sign-in optional (a button in the
-  header, no gate).
-- Only people in your Microsoft tenant can log in at all — anyone else's
-  Microsoft account is rejected by Entra ID itself, before your site sees
-  anything.
+**Buttons now do real things:**
+- **⬇ Download** on a real SharePoint document fetches and downloads the
+  actual file bytes via Graph.
+- **↗ View in SharePoint** opens the file's real SharePoint URL.
+- A Graph **upload** function (`uploadFileToSharePoint`) is implemented and
+  ready in `js/graph.js`, but nothing calls it yet — see below.
 
-### What this does *not* do yet
-- Anyone in the tenant who logs in becomes a Contributor — it isn't yet
-  scoped to a specific security group, and it isn't tied to real SharePoint
-  permissions. For that, see the security-group + `Sites.Selected` approach
-  discussed in the project history — it's a bigger change (real permission
-  enforcement happens in SharePoint itself, not in the browser).
-- It doesn't yet call Graph to upload into the real SharePoint folder —
-  uploads are real, but browser-local, until that's wired in (see above).
+### Required Graph permissions
+`js/auth.js` requests `User.Read` at sign-in (always works). `js/graph.js`
+separately requests `Sites.ReadWrite.All` + `Files.ReadWrite.All` the first
+time it's actually needed (incremental consent) — so a Graph permissions
+issue never blocks basic sign-in, only the live document features.
 
+## Register a Document (email-based submission)
 
-## Important limitation (because there's no shared backend)
+This page is intentionally **not** a Graph upload — it composes an email
+instead:
+1. Your name/email auto-fill from your signed-in Microsoft account.
+2. Fill in the document details, click **📎 Choose file** to attach a file
+   from your computer, then **📧 Send**.
+3. Send opens your email client with the subject/body fully pre-filled,
+   including a suggested SharePoint folder computed from the pillar/story
+   you picked (e.g. `docs/03-monitoring/3.6 Defect Trend Analysis/`).
+4. **You still have to manually attach the file in your email app before
+   hitting send there.** Browsers cannot attach files to an email
+   automatically — this is a hard security restriction, not a limitation of
+   this build. The email body includes an explicit reminder naming the file.
+5. Submissions go to **`Treat@testingxperts.com`** (`COE_INTAKE_EMAIL` in
+   `js/site.js`) — change it there if needed.
+6. While a file is attached (before you send), it's also indexed
+   client-side and shows up in search results tagged **📋 pending
+   submission** — purely a same-browser-session convenience so you can
+   confirm the content matches before sending.
 
-Everything a visitor adds or changes — role/login, uploaded documents, tags,
-story status — is saved with `localStorage`, **in that one browser only**.
-Two different people opening the same link will not see each other's
-uploads or sign-in. This keeps the site 100% free, but it means it's best for:
-- a single person's/browser's working session, or
-- a demo of the workflow before wiring up a real shared backend.
+### Going further: a real upload button instead of email
+`uploadFileToSharePoint(file, pillarCode)` in `js/graph.js` already does a
+real Graph upload (simple upload, good up to 4MB — larger files need Graph's
+chunked upload-session API instead). To wire it to the Send button instead
+of (or alongside) the email flow, call it from the `rfSendBtn` click handler
+in `js/site.js`'s `initRegisterForm()`.
 
-### Going further (optional, still free)
-If you want everyone to see the same catalog/status/roles:
-- **Supabase** or **Firebase** (free tier) — a hosted database + real login,
-  ~10–15 minutes to wire in, no server to run.
-- **Microsoft Graph API** against your own SharePoint/Teams — since the
-  documents already live there, this is the most natural fit; it needs an
-  Azure AD app registration from your M365 admin.
+## Roles and real permission enforcement (optional next step)
 
-Either way, only `js/site.js`'s storage functions (`getUserDocs`,
-`getStatusOverrides`, `getRole`, etc.) need to change from `localStorage` to
-API calls — the rest of the UI stays the same.
+Right now, signing in = Contributor, for everyone in the tenant. If you want
+this tied to real SharePoint permissions:
+1. Create Entra ID security groups (e.g. `TREAT-Viewers`, `TREAT-Contributors`)
+   and grant them Read / Edit on the SharePoint folder respectively — this
+   is where *real* enforcement happens, in SharePoint itself.
+2. In Entra ID → Enterprise Applications → this app → set "Assignment
+   required = Yes" and assign those groups, so only people in them can even
+   sign in.
+3. Add a "groups" claim to the ID token (App registration → Token
+   configuration) so `js/auth.js` can read the signed-in user's group
+   membership and only grant Contributor UI to people in the Contributors
+   group — this is UI-only, but ties the initial assumption of the role to
+   something more scoped than "your entire tenant."
 
-## Hosting for free
+## Other structural notes
 
-### GitHub Pages
-1. Create a new **public** repo, upload every file/folder here (keep
-   `assets/`, `js/`, `data/`, all `.html` files, and `.nojekyll`).
-2. **Settings → Pages** → Source: `Deploy from a branch`, branch `main`,
-   folder `/ (root)` → Save.
-3. Live in ~1 minute at `https://<your-username>.github.io/<repo>/`.
+- **Progress/status** lives only on the Dashboard (`dashboard.html`) — a
+  story-level table where Contributors can update status inline. Pillar and
+  story pages show content/documents only, no status chips.
+- **Quick Links** (Home page) show each document with every badge it earns
+  (Featured / Most Downloaded / Recently Modified) rather than listing the
+  same document three times.
+- **Full-text search** works the same way everywhere it appears — main hero
+  search bar, the Documents page search, and the chatbot — all powered by
+  the same `searchAll()` function in `js/site.js`.
+- `documents122.html` in this repo is an old unreferenced backup file, not
+  linked from anywhere — safe to delete whenever convenient.
 
-### Netlify Drop (no GitHub needed)
-Go to `app.netlify.com/drop`, drag the folder in, get an instant live URL.
+## Hosting
 
-Vercel and Cloudflare Pages work the same way (drag-and-drop or connect a
-repo, no build command, output directory `/`).
-
-## Editing content
-
-- **Stories** (the 29 deliverables): edit the `STORIES` array at the top of
-  `js/site.js`, or edit `data/documents.json` and re-run
-  `python3 build2.py` (requires `pip install beautifulsoup4`) to regenerate
-  all pages from the `src/` originals.
-- **Seed documents** (the 8 real docs already in the catalog): edit
-  `SEED_DOCS` in `js/site.js`, or edit `data/seed_documents.json` and
-  re-embed it (see the data-loading block at the top of the script that
-  generates `js/site.js`), then re-run `python3 build2.py`.
-- **SharePoint folder link**: change `SHAREPOINT_FOLDER_URL` at the top of
-  `js/site.js`.
+Still a fully static site — GitHub Pages, Netlify, Vercel, or any static
+host works with zero configuration. Just make sure the redirect URI
+configured on the Entra ID app registration matches wherever it's actually
+hosted (currently set for local testing — update `js/auth.js`'s
+`redirectUri` is computed automatically from `window.location`, so this
+generally does not need manual changes, but double check the Entra ID app
+registration's allowed redirect URIs include your real hosted URL).

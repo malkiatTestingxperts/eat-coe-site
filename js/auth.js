@@ -15,8 +15,8 @@
 
 const MSAL_CONFIG = {
   auth: {
-    clientId: "PASTE-YOUR-CLIENT-ID-HERE",
-    authority: "https://login.microsoftonline.com/PASTE-YOUR-TENANT-ID-HERE",
+    clientId: "9a817d03-ec3b-4e4f-8fa6-b7278cab47fe",
+    authority: "https://login.microsoftonline.com/d7e861c9-d924-4413-86db-05780e928657",
     redirectUri: window.location.origin + window.location.pathname
   },
   cache: {
@@ -61,9 +61,45 @@ async function signIn() {
     const result = await msalInstance.loginPopup({ scopes: ["User.Read"] });
     msalInstance.setActiveAccount(result.account);
     onSignedIn(result.account);
+    // On the dedicated login page, a successful sign-in sends you straight
+    // to the Home page — Home itself has no login button, it assumes
+    // whoever reaches it is already authenticated.
+    if (isLoginPage()) {
+      window.location.href = "index.html";
+    }
   } catch (e) {
     console.error("Microsoft sign-in failed:", e);
-    alert("Sign-in failed or was cancelled. Check the browser console for details.");
+    const errorCode = e && e.errorCode ? e.errorCode : (e && e.name) || "unknown_error";
+    const errorMessage = e && e.errorMessage ? e.errorMessage : (e && e.message) || String(e);
+
+    let hint = "";
+    if (errorCode.indexOf("50011") !== -1 || /redirect/i.test(errorMessage)) {
+      hint =
+        "\n\nThis usually means the redirect URI this page is sending doesn't " +
+        "exactly match what's registered in Entra ID.\n\n" +
+        "This page is sending:\n  " + MSAL_CONFIG.auth.redirectUri + "\n\n" +
+        "Ask your Entra ID admin to check App registrations → this app → " +
+        "Authentication → Redirect URIs, and add that exact URL (protocol, " +
+        "host, port, and path all have to match — e.g. \"localhost\" and " +
+        "\"127.0.0.1\" are treated as different origins).";
+    } else if (errorCode === "popup_window_error" || errorCode === "user_cancelled") {
+      hint =
+        "\n\nThis usually means the sign-in popup was blocked or closed. " +
+        "Check for a popup-blocked icon in the address bar and allow popups " +
+        "for this site, then try again.";
+    } else if (errorCode.indexOf("65001") !== -1 || /consent/i.test(errorMessage)) {
+      hint =
+        "\n\nThis usually means the app needs admin consent for the requested " +
+        "permissions. Ask your Entra ID admin to grant admin consent in " +
+        "Entra ID → App registrations → this app → API permissions.";
+    }
+
+    alert(
+      "Sign-in failed.\n\n" +
+      "Error code: " + errorCode + "\n" +
+      "Details: " + errorMessage +
+      hint
+    );
   }
 }
 
@@ -87,12 +123,21 @@ function onSignedIn(account) {
   if (typeof setRole === "function") setRole("contributor");
   document.body.classList.remove("signin-required");
   renderAuthUI();
+
+  // Load the real SharePoint document list (Microsoft Graph) in the
+  // background. This is a separate token request from the basic sign-in
+  // above (User.Read), so if Sites/Files permissions need a moment of
+  // incremental consent or aren't granted yet, it fails quietly and the
+  // site just keeps showing the built-in document list instead.
+  if (typeof initGraphCatalog === "function") {
+    initGraphCatalog();
+  }
 }
 
 function onSignedOut() {
   if (typeof setUserName === "function") setUserName("Guest");
   if (typeof setRole === "function") setRole("viewer");
-  if (REQUIRE_SIGNIN) document.body.classList.add("signin-required");
+  if (REQUIRE_SIGNIN && !isLoginPage()) document.body.classList.add("signin-required");
   renderAuthUI();
 }
 
@@ -119,6 +164,10 @@ function renderAuthUI() {
   }
 }
 
+function isLoginPage() {
+  return /(^|\/)login\.html$/.test(window.location.pathname);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (!SSO_ENABLED) {
     renderAuthUI();
@@ -132,7 +181,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const account = getActiveAccount();
   if (account) {
     onSignedIn(account);
+    // Already signed in but landed on the login page anyway (e.g. via a
+    // bookmark) — no need to show it, go straight to Home.
+    if (isLoginPage()) {
+      window.location.href = "index.html";
+    }
   } else {
     onSignedOut();
+    // Not signed in and this isn't the login page itself — send them there
+    // instead of showing a blurred/gated version of the real page.
+    if (REQUIRE_SIGNIN && !isLoginPage()) {
+      window.location.href = "login.html";
+    }
   }
 });

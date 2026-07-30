@@ -881,21 +881,41 @@ function bumpDownload(docId) {
   lsSet(LS.downloads, counts);
 }
 
+// Populated asynchronously by js/graph.js once the real SharePoint folder
+// listing has been fetched via Microsoft Graph. Until then (not signed in,
+// Graph not configured, or still loading), getAllDocuments() falls back to
+// the static seed catalog below, so the site always shows something.
+let GRAPH_DOCS = null;
+function setGraphDocuments(list) {
+  GRAPH_DOCS = list;
+  refreshDocViews();
+  if (typeof renderMetrics === "function") renderMetrics();
+}
+
 function getAllDocuments() {
   const overrides = getSeedOverrides();
   const counts = getDownloadCounts();
-  const seed = SEED_DOCS.map(d => {
-    const o = overrides[d.id] || {};
-    return {
-      ...d,
-      tags: o.tags || d.tags,
-      lastModifiedBy: o.lastModifiedBy || d.lastModifiedBy,
-      lastModifiedDate: o.lastModifiedDate || d.lastModifiedDate,
-      downloads: d.downloads + (counts[d.id] || 0)
-    };
-  });
+
+  let base;
+  if (GRAPH_DOCS && GRAPH_DOCS.length) {
+    // Real documents fetched live from SharePoint via Microsoft Graph.
+    base = GRAPH_DOCS.map(d => ({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
+  } else {
+    base = SEED_DOCS.map(d => {
+      const o = overrides[d.id] || {};
+      return {
+        ...d,
+        tags: o.tags || d.tags,
+        lastModifiedBy: o.lastModifiedBy || d.lastModifiedBy,
+        lastModifiedDate: o.lastModifiedDate || d.lastModifiedDate,
+        downloads: d.downloads + (counts[d.id] || 0)
+      };
+    });
+  }
+
   const user = getUserDocs().map(d => ({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
-  return [...seed, ...user];
+  const pending = getPendingAttachment();
+  return [...base, ...user, ...(pending ? [pending] : [])];
 }
 
 function getDocsForStory(code) {
@@ -913,7 +933,7 @@ function getDocsForStory(code) {
  * real, but the mailto fallback is still worth keeping for anyone without
  * SharePoint access.
  */
-const COE_INTAKE_EMAIL = "malkiat.singh@testingxperts.com"; // TODO: replace with your real intake mailbox
+const COE_INTAKE_EMAIL = "Treat@testingxperts.com";
 
 const PILLAR_FOLDERS = {
   "01": "docs/01-standards",
@@ -939,35 +959,81 @@ function suggestedFolder(pillarCode, storyCode) {
   }
   return path + "/";
 }
-function buildEmail() {
-  const name = docNameInput.value.trim() || "(untitled document)";
-  const contributor = nameInput.value.trim() || "(not provided)";
-  const contributorEmail = document.getElementById("rfEmail").value.trim();
-  const desc = document.getElementById("rfDescription").value.trim();
-  const tags = document.getElementById("rfTags").value.trim();
-  const pillar = pillarSelect.value;
-  const story = storySelect.value;
-  const file = fileInput.files[0];
-  const folder = suggestedFolder(pillar, story);
+/* ---------------- full-text extraction (PDF.js / Mammoth.js) ----------------
+ * Used in two places: (1) the file attached on Register a Document is
+ * indexed for THIS browsing session only, so it's searchable even before
+ * it's emailed/filed into SharePoint; (2) once Microsoft Graph is connected
+ * (see js/graph.js), the same functions extract text from real SharePoint
+ * files so the main search bar and chatbot can match text inside them too.
+ */
+const MAX_FULLTEXT_CHARS = 200000;
 
-  const subject = "TREAT Document Submission: " + name;
-  let body = "New document submission for the TREAT COE repository.\n\n";
-  body += "Document name: " + name + "\n";
-  body += "Submitted by: " + contributor + (contributorEmail ? " (" + contributorEmail + ")" : "") + "\n";
-  body += "Pillar: " + (PILLAR_NAMES[pillar] || "Not specified") + "\n";
-  if (story) {
-    const s = STORIES.find(x => x.code === story);
-    body += "Related story: " + story + (s ? " · " + s.title : "") + "\n";
-  }
-  body += "Labels/tags: " + (tags || "none") + "\n";
-  if (folder) body += "Suggested SharePoint folder: " + folder + "\n";
-  if (desc) body += "\nDescription:\n" + desc + "\n";
-  body += "\n----------------------------------------\n";
-  body += file
-    ? ("REMINDER: attach \"" + file.name + "\" to this email before sending — a webpage can't attach it automatically.\n")
-    : "REMINDER: attach your document file(s) to this email before sending.\n";
-  return { subject, body };
+if (typeof pdfjsLib !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.worker.min.js";
 }
+
+async function extractPdfText(arrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(" ") + "\n";
+    if (text.length > MAX_FULLTEXT_CHARS) break;
+  }
+  return text.slice(0, MAX_FULLTEXT_CHARS);
+}
+
+async function extractDocxText(arrayBuffer) {
+  const result = await mammoth.extractRawText({ arrayBuffer });
+  return (result.value || "").slice(0, MAX_FULLTEXT_CHARS);
+}
+
+/**
+ * Extracts searchable full text from a File/Blob (with .name/.type/.arrayBuffer()).
+ * Returns { text, status } where status is one of:
+ * "ok" | "unsupported" (file type not handled) |
+ * "unavailable" (PDF.js/Mammoth.js failed to load) | "error" (parse failure).
+ */
+async function extractFullText(file) {
+  const nameLower = (file.name || "").toLowerCase();
+  try {
+    if (file.type === "application/pdf" || nameLower.endsWith(".pdf")) {
+      if (typeof pdfjsLib === "undefined") return { text: null, status: "unavailable" };
+      const buf = await file.arrayBuffer();
+      return { text: await extractPdfText(buf), status: "ok" };
+    }
+    if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || nameLower.endsWith(".docx")) {
+      if (typeof mammoth === "undefined") return { text: null, status: "unavailable" };
+      const buf = await file.arrayBuffer();
+      return { text: await extractDocxText(buf), status: "ok" };
+    }
+    if ((file.type || "").startsWith("text/") || nameLower.endsWith(".txt") || nameLower.endsWith(".md")) {
+      const text = await file.text();
+      return { text: text.slice(0, MAX_FULLTEXT_CHARS), status: "ok" };
+    }
+    return { text: null, status: "unsupported" };
+  } catch (e) {
+    console.error("Full-text extraction failed for", file.name, e);
+    return { text: null, status: "error" };
+  }
+}
+
+/* ---------------- pending attachment (session-only search preview) ---------------- */
+const PENDING_KEY = "eatcoe_pending_attachment";
+function getPendingAttachment() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function savePendingAttachment(doc) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(doc)); } catch (e) { console.error(e); }
+}
+function clearPendingAttachment() {
+  try { sessionStorage.removeItem(PENDING_KEY); } catch (e) { /* ignore */ }
+}
+
 function initRegisterForm() {
   const form = document.getElementById("docRegisterForm");
   if (!form) return;
@@ -977,12 +1043,19 @@ function initRegisterForm() {
   const fileInput = document.getElementById("rfFile");
   const fileNameLabel = document.getElementById("rfFileName");
   const nameInput = document.getElementById("rfName");
+  const emailInput = document.getElementById("rfEmail");
   const docNameInput = document.getElementById("rfDocName");
-  const preview = document.getElementById("emailPreview");
-  const mailtoBtn = document.getElementById("mailtoBtn");
-  const copyBtn = document.getElementById("copyBtn");
+  const sendBtn = document.getElementById("rfSendBtn");
 
-  if (nameInput && getUserName() !== "Guest") nameInput.value = getUserName();
+  // Auto-fetch name/email from the signed-in Microsoft account (falls back
+  // to the locally-stored name if SSO isn't configured yet).
+  const account = (typeof getActiveAccount === "function") ? getActiveAccount() : null;
+  if (account) {
+    if (nameInput && !nameInput.value) nameInput.value = account.name || "";
+    if (emailInput && !emailInput.value) emailInput.value = account.username || "";
+  } else if (nameInput && getUserName() !== "Guest") {
+    nameInput.value = getUserName();
+  }
 
   function populateStoryOptions() {
     const pillar = pillarSelect.value;
@@ -999,23 +1072,38 @@ function initRegisterForm() {
   populateStoryOptions();
   if (params.get("story")) storySelect.value = params.get("story");
 
-  pillarSelect.addEventListener("change", () => { populateStoryOptions(); updatePreview(); });
-  form.querySelectorAll("input, textarea, select").forEach(el => {
-    el.addEventListener("input", updatePreview);
-    el.addEventListener("change", updatePreview);
-  });
+  pillarSelect.addEventListener("change", populateStoryOptions);
 
-  fileInput.addEventListener("change", () => {
+  fileInput.addEventListener("change", async () => {
     const file = fileInput.files[0];
-    fileNameLabel.textContent = file ? ("📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)") : "";
-    if (file && !docNameInput.value) docNameInput.value = file.name;
-    updatePreview();
+    if (!file) { clearPendingAttachment(); fileNameLabel.textContent = ""; return; }
+
+    fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB) — indexing for search…";
+    if (!docNameInput.value) docNameInput.value = file.name;
+
+    const { text, status } = await extractFullText(file);
+    const today = new Date().toISOString().slice(0, 10);
+    savePendingAttachment({
+      id: "pending-attachment", type: "document", sourceType: "pending",
+      name: docNameInput.value || file.name,
+      pillarCode: pillarSelect.value || null, pillar: PILLAR_NAMES[pillarSelect.value] || null,
+      storyCode: storySelect.value || null,
+      tags: [], downloads: 0, featured: false,
+      uploadedBy: nameInput.value || getUserName(), uploadDate: today,
+      lastModifiedBy: nameInput.value || getUserName(), lastModifiedDate: today,
+      url: "register-document.html",
+      location: "📋 Pending submission — attached here, not yet emailed",
+      fullText: text, fullTextStatus: status
+    });
+
+    fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
+      (status === "ok" ? " · 🔍 indexed for search" : "");
   });
 
   function buildEmail() {
     const name = docNameInput.value.trim() || "(untitled document)";
     const contributor = nameInput.value.trim() || "(not provided)";
-    const contributorEmail = document.getElementById("rfEmail").value.trim();
+    const contributorEmail = emailInput.value.trim();
     const desc = document.getElementById("rfDescription").value.trim();
     const tags = document.getElementById("rfTags").value.trim();
     const pillar = pillarSelect.value;
@@ -1042,26 +1130,21 @@ function initRegisterForm() {
     return { subject, body };
   }
 
-  function updatePreview() {
-    const { subject, body } = buildEmail();
-    document.getElementById("epTo").textContent = COE_INTAKE_EMAIL;
-    preview.querySelector(".ep-subject").textContent = subject;
-    preview.querySelector(".ep-body").textContent = body;
-    mailtoBtn.href = "mailto:" + COE_INTAKE_EMAIL + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-  }
-
-  copyBtn.addEventListener("click", () => {
-    const { subject, body } = buildEmail();
-    const full = "To: " + COE_INTAKE_EMAIL + "\nSubject: " + subject + "\n\n" + body;
-    navigator.clipboard.writeText(full).then(() => {
-      const original = copyBtn.textContent;
-      copyBtn.textContent = "✓ Copied";
-      setTimeout(() => { copyBtn.textContent = original; }, 1800);
-    }).catch(() => alert("Couldn't copy automatically — select the preview text and copy it manually."));
-  });
-
   form.addEventListener("submit", (e) => e.preventDefault());
-  updatePreview();
+
+  if (sendBtn) {
+    sendBtn.addEventListener("click", () => {
+      if (!docNameInput.value.trim() && !fileInput.files.length) {
+        alert("Please enter a document name or attach a file before sending.");
+        return;
+      }
+      const { subject, body } = buildEmail();
+      const mailto = "mailto:" + COE_INTAKE_EMAIL + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+      // Exposed for testing/inspection; the real action is the navigation below.
+      window.__lastMailto = mailto;
+      window.location.href = mailto;
+    });
+  }
 }
 
 function deleteUserDocument(id) {
@@ -1081,27 +1164,40 @@ function updateDocTags(doc, newTags) {
   logActivity("tag", doc.name);
 }
 
+/**
+ * "View in SharePoint" — always opens the real item/folder link. For
+ * documents fetched live via Microsoft Graph, doc.url is the real item's
+ * webUrl; otherwise it falls back to the shared folder link.
+ */
 function openDocument(doc) {
-  // "View in SharePoint" — always opens the real folder/link.
   bumpDownload(doc.id);
   logActivity("view", doc.name);
   window.open(doc.url || SHAREPOINT_FOLDER_URL, "_blank", "noopener");
 }
 
 /**
- * Download button. If this document was uploaded through this site's demo
- * storage, its bytes are stored locally (base64) and this triggers a real
- * browser download right now. Documents that only exist in SharePoint (the
- * 8 seed documents, or anything uploaded before Graph API was connected)
- * don't have local bytes, so this falls back to opening SharePoint.
- *
- * TODO (once Graph API / SSO is wired up): replace the fallback branch with
- * a real fetch of GET /sites/{id}/drive/items/{itemId}/content and trigger
- * the download from those bytes instead — the button itself doesn't change.
+ * Download button.
+ * - Graph-sourced documents (real SharePoint files, doc.sourceType==="graph"):
+ *   fetches the real file bytes via Microsoft Graph and downloads them for
+ *   real — see downloadGraphItem() in js/graph.js.
+ * - Documents uploaded through this site's old local-demo storage (if any
+ *   remain from before Graph was connected) still download from their saved
+ *   base64 bytes.
+ * - Anything else (seed docs before Graph was connected, or if the Graph
+ *   download fails for any reason) falls back to opening SharePoint.
  */
-function downloadDocument(doc) {
+async function downloadDocument(doc) {
   logActivity("download", doc.name);
   bumpDownload(doc.id);
+
+  if (doc.sourceType === "graph" && typeof downloadGraphItem === "function") {
+    try {
+      await downloadGraphItem(doc);
+      return;
+    } catch (e) {
+      console.error("Microsoft Graph download failed, falling back to SharePoint link:", e);
+    }
+  }
 
   if (doc.fileData) {
     const a = document.createElement("a");
@@ -1113,7 +1209,6 @@ function downloadDocument(doc) {
     return;
   }
 
-  // No local bytes yet — best available action is to open SharePoint directly.
   window.open(doc.url || SHAREPOINT_FOLDER_URL, "_blank", "noopener");
 }
 
@@ -1333,17 +1428,25 @@ function renderDocumentsPage() {
 
 function docRowHtml(d) {
   const canManage = d.sourceType === "user";
-  const hasLocalFile = !!d.fileData;
+  const isPending = d.sourceType === "pending";
+  const canRealDownload = !!d.fileData || d.sourceType === "graph";
   let indexBadge = "";
   if (d.fullText) {
     indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
-  } else if (d.sourceType === "user" && d.fullTextStatus === "unsupported") {
+  } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
+  const sharePointOnlyTag = (canRealDownload || isPending) ? "" : '<span class="sso-note">(SharePoint only)</span>';
+  const pendingTag = isPending ? '<span class="type-badge document" title="Attached on the Register a Document page — not yet emailed">📋 pending submission</span>' : "";
+  const actions = isPending
+    ? `<span class="sso-note">Fill out and send the form above to submit this ↑</span>`
+    : `<button onclick='downloadDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>⬇ Download</button>
+       <button onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>↗ View in SharePoint</button>
+       ${canManage ? `<button class="danger contributor-only" onclick="handleDeleteDoc('${d.id}')">Remove</button>` : ""}`;
   return `
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
-        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${hasLocalFile ? '' : '<span class="sso-note">(SharePoint only)</span>'} ${indexBadge}</div>
+        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${sharePointOnlyTag}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
         ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
@@ -1353,9 +1456,7 @@ function docRowHtml(d) {
         </div>
       </div>
       <div class="dr-actions">
-        <button onclick='downloadDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>⬇ Download</button>
-        <button onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")})'>↗ View in SharePoint</button>
-        ${canManage ? `<button class="danger contributor-only" onclick="handleDeleteDoc('${d.id}')">Remove</button>` : ""}
+        ${actions}
       </div>
     </div>`;
 }
