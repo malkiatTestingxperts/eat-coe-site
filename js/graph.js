@@ -10,18 +10,13 @@
    ========================================================================== */
 
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
-// Files.ReadWrite (no ".All") is a low-privilege delegated scope scoped to
-// files the signed-in user can already access — per Microsoft's own
-// permissions reference this does NOT require admin consent, unlike
-// Sites.ReadWrite.All / Files.ReadWrite.All (tenant-wide, admin consent
-// required), which this used to request. It's ReadWrite rather than plain
-// Files.Read specifically because Microsoft's own documentation for the
-// /shares endpoint (used below to resolve the shared folder link) lists
-// Files.ReadWrite as its minimum required delegated permission — Files.Read
-// alone was not enough to resolve the share, which is why downloads/views
-// kept falling back to the generic SharePoint folder link even after the
-// previous fix.
-const GRAPH_SCOPES = ["User.Read", "Files.ReadWrite"];
+// Sites.Read.All — this is the permission your admin actually granted (a
+// tenant-wide, read-only grant covering every SharePoint site, not just
+// this one). Requesting this exact scope name is what matters: MSAL only
+// uses a granted permission if the app asks for that specific scope, so
+// this has to match whatever your admin consented to, or the token won't
+// include it even though it's been granted in Entra ID.
+const GRAPH_SCOPES = ["User.Read", "Sites.Read.All"];
 const GRAPH_CACHE_KEY = "eatcoe_graph_folder_cache";
 const GRAPH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — avoid hammering Graph on every page load
 const MAX_AUTO_INDEX_FILES = 25; // cap background full-text extraction per session
@@ -380,9 +375,11 @@ async function viewGraphItem(doc, targetWindow) {
  * an email per the current requirements) — available for whenever real
  * in-browser upload is wanted instead of/alongside the email flow.
  *
- * NOTE: GRAPH_SCOPES already includes Files.ReadWrite, so the token this
- * function gets does have write access — it's just not wired to any button
- * yet (Register a Document intentionally emails instead, per current
+ * NOTE: GRAPH_SCOPES is Sites.Read.All right now — read-only — so this
+ * function will fail with a permissions error if actually called. It needs
+ * "Sites.ReadWrite.All" instead (a further, separate admin consent step)
+ * before being wired to any button. Also not currently wired to anything
+ * (Register a Document intentionally emails instead, per current
  * requirements).
  */
 async function uploadFileToSharePoint(file, pillarCode) {
