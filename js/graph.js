@@ -119,6 +119,51 @@ async function graphFetch(pathOrUrl, options = {}) {
 }
 
 /* ---------------- resolving + listing the shared folder ---------------- */
+/**
+ * Parses a SharePoint sharing URL like
+ *   https://tenant.sharepoint.com/:f:/s/SiteName/AbCdEf...
+ * or a normal site URL like
+ *   https://tenant.sharepoint.com/sites/SiteName/...
+ * into { hostname, sitePath } for use with Graph's /sites/{hostname}:{sitePath}
+ * endpoint. Returns null if the URL doesn't match either shape.
+ */
+function parseSharePointSitePath(url) {
+  const sharingMatch = /^https:\/\/([^/]+)\/:[a-z]:\/[a-z]\/([^/]+)\//i.exec(url);
+  if (sharingMatch) return { hostname: sharingMatch[1], sitePath: "/sites/" + sharingMatch[2] };
+  const siteMatch = /^https:\/\/([^/]+)\/sites\/([^/]+)/i.exec(url);
+  if (siteMatch) return { hostname: siteMatch[1], sitePath: "/sites/" + siteMatch[2] };
+  return null;
+}
+
+/**
+ * Fallback used when resolving via the sharing link itself (/shares) fails.
+ * This can genuinely happen even when the exact same link opens fine in a
+ * browser for the same person — some tenants apply stricter rules to
+ * API/Graph-based access to a sharing link than to normal interactive
+ * access. Resolving the SharePoint SITE directly and using its default
+ * document library is a more standard, usually more reliable Graph call
+ * that lines up with how interactive site access works.
+ *
+ * Caveat: this lands on the site's document library ROOT, which may be
+ * broader (or in rare cases narrower) than whatever specific subfolder the
+ * original sharing link pointed to — it's the best available fallback, not
+ * a guaranteed exact match for the original link's target folder.
+ */
+async function resolveSharePointFolderViaSite() {
+  const parsed = parseSharePointSitePath(SHAREPOINT_FOLDER_URL);
+  if (!parsed) throw new Error("Could not parse a SharePoint site path from SHAREPOINT_FOLDER_URL to use as a fallback.");
+  const siteRes = await graphFetch(`/sites/${parsed.hostname}:${parsed.sitePath}`);
+  const site = await siteRes.json();
+  const rootRes = await graphFetch(`/sites/${site.id}/drive/root`);
+  const rootItem = await rootRes.json();
+  return {
+    driveId: rootItem.parentReference && rootItem.parentReference.driveId,
+    itemId: rootItem.id,
+    webUrl: rootItem.webUrl,
+    name: rootItem.name
+  };
+}
+
 async function resolveSharePointFolder() {
   const encoded = encodeSharingUrl(SHAREPOINT_FOLDER_URL);
   try {
@@ -130,23 +175,28 @@ async function resolveSharePointFolder() {
       webUrl: item.webUrl,
       name: item.name
     };
-  } catch (e) {
-    console.error(
-      "Could not resolve the shared SharePoint folder via Microsoft Graph. " +
-      "This is almost always a real access/permissions issue on the SharePoint " +
-      "side (the signed-in user doesn't have access to this specific link/site), " +
-      "not a bug in this code — the app's permission scope was already granted " +
-      "successfully (that's a separate step from the sign-in itself). " +
-      "The exact link being resolved is:\n  " + SHAREPOINT_FOLDER_URL +
-      "\nTo check: open that link directly in a browser, signed in as the same " +
-      "account, and see whether SharePoint itself grants access without this app " +
-      "involved at all. If that also fails or asks to request access, an admin " +
-      "needs to grant that account real access to the site/folder (adding them as " +
-      "a member/visitor, or re-sharing the link with their account specifically) " +
-      "— no code change here can substitute for that.",
-      e
+  } catch (shareError) {
+    console.warn(
+      "Resolving via the sharing link (/shares) failed — trying the SharePoint " +
+      "site directly instead as a fallback. This mismatch (link works in a " +
+      "browser, fails via Graph) is a known pattern in some tenants, not a bug " +
+      "in this code.", shareError
     );
-    throw e;
+    try {
+      return await resolveSharePointFolderViaSite();
+    } catch (siteError) {
+      console.error(
+        "Both resolution paths failed — the sharing-link lookup (/shares) and " +
+        "the direct site lookup. This points to a real access/permissions issue " +
+        "for the signed-in user on the SharePoint side, not something a further " +
+        "code change here can fix. The exact link involved is:\n  " + SHAREPOINT_FOLDER_URL +
+        "\nCheck: does this account have real membership/access on the " +
+        "\"DigitalBanking\" SharePoint site itself (not just the sharing link)? " +
+        "An admin may need to add them as a site member or grant access directly.",
+        siteError
+      );
+      throw siteError;
+    }
   }
 }
 
