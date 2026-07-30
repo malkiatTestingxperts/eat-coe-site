@@ -13,11 +13,21 @@
       placeholders below keep SSO OFF and the site behaves exactly as before.
    ========================================================================== */
 
+// This MUST exactly match a Redirect URI registered on the Entra ID app
+// registration (Authentication blade) — protocol, host, path, and trailing
+// slash all have to match character-for-character, or sign-in fails with
+// "AADSTS50011: redirect URI mismatch". It does NOT need to be login.html —
+// MSAL's popup flow just briefly loads this URL to capture the auth
+// response, then closes the popup automatically; it's independent of which
+// page in the app the person actually clicked "Log In" from.
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+
 const MSAL_CONFIG = {
   auth: {
     clientId: "9a817d03-ec3b-4e4f-8fa6-b7278cab47fe",
     authority: "https://login.microsoftonline.com/d7e861c9-d924-4413-86db-05780e928657",
-    redirectUri: window.location.origin + window.location.pathname
+    redirectUri: REGISTERED_REDIRECT_URI,
+    postLogoutRedirectUri: REGISTERED_REDIRECT_URI
   },
   cache: {
     cacheLocation: "localStorage",
@@ -33,8 +43,8 @@ const SSO_ENABLED =
 
 // Set to false if you'd rather make sign-in optional (a button, not a gate).
 const REQUIRE_SIGNIN = true;
-let msalInstance = null;
 
+let msalInstance = null;
 if (SSO_ENABLED) {
   msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
 }
@@ -173,14 +183,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderAuthUI();
     return;
   }
-
   try {
-    await msalInstance.initialize();      // <-- Required in MSAL v3
     await msalInstance.handleRedirectPromise();
   } catch (e) {
-    console.error("MSAL initialization failed:", e);
+    console.error("MSAL redirect handling failed:", e);
   }
-
   const account = getActiveAccount();
   if (account) {
     onSignedIn(account);
