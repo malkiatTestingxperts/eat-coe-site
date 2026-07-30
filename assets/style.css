@@ -2409,3 +2409,7 @@ body.role-contributor .viewer-only {
   font-size: 14px;
   white-space: nowrap;
 }
+
+.login-heading {
+  color: var(--teal-dark);
+}
