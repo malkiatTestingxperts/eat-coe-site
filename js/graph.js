@@ -16,6 +16,14 @@ const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 // uses a granted permission if the app asks for that specific scope, so
 // this has to match whatever your admin consented to, or the token won't
 // include it even though it's been granted in Entra ID.
+//
+// Core scopes requested at sign-in — document browsing only. Mail.Send is
+// deliberately NOT included here (see getMailSendToken() further down):
+// it's requested completely separately, only at the moment someone clicks
+// Send on the Register a Document page. This keeps its permission status
+// fully isolated from sign-in and document browsing — if Mail.Send isn't
+// granted (or needs admin approval that hasn't happened yet), only the
+// Send button is affected. Nothing else in the app depends on it.
 const GRAPH_SCOPES = ["User.Read", "Sites.Read.All"];
 const GRAPH_CACHE_KEY = "eatcoe_graph_folder_cache";
 const GRAPH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — avoid hammering Graph on every page load
@@ -297,6 +305,7 @@ async function listAllSharePointFiles(driveId, rootItemId) {
   async function walk(itemId, pillarCode, storyName, depth) {
     if (depth > MAX_FOLDER_DEPTH) return;
     const children = await listSharePointChildren(driveId, itemId);
+    const subfolderWalks = [];
     for (const child of children) {
       if (!child.folder) {
         results.push(mapDriveItemToDoc(child, driveId, pillarCode, storyName));
@@ -304,13 +313,17 @@ async function listAllSharePointFiles(driveId, rootItemId) {
       }
       const inferredPillar = inferPillarCodeFromFolderName(child.name);
       const inferredStory = /^\d+\.\d+/.test(child.name) ? child.name : null;
-      await walk(
+      // Fetch sibling folders concurrently rather than one at a time —
+      // this is the main thing that made the full scan slow, since each
+      // folder was previously a separate awaited round-trip in series.
+      subfolderWalks.push(walk(
         child.id,
         inferredPillar || pillarCode,
         inferredStory || storyName,
         depth + 1
-      );
+      ));
     }
+    await Promise.all(subfolderWalks);
   }
 
   await walk(rootItemId, null, null, 0);
@@ -333,6 +346,8 @@ function setGraphCacheEntry(folder, docs) {
   } catch (e) { /* storage full or unavailable — just skip caching */ }
 }
 
+let graphCatalogInFlight = null; // shared promise so concurrent callers don't trigger duplicate, redundant folder scans
+
 async function loadGraphCatalog({ forceRefresh = false } = {}) {
   if (!forceRefresh) {
     const cached = getGraphCacheEntry();
@@ -341,13 +356,28 @@ async function loadGraphCatalog({ forceRefresh = false } = {}) {
       indexGraphDocumentsInBackground(cached.docs);
       return cached.docs;
     }
+    if (graphCatalogInFlight) {
+      // Someone else already kicked off a load (e.g. the automatic
+      // background fetch right after sign-in) — wait on that one instead
+      // of starting a second, redundant full folder scan.
+      return graphCatalogInFlight;
+    }
   }
-  const folder = await resolveSharePointFolder();
-  const docs = await listAllSharePointFiles(folder.driveId, folder.itemId);
-  setGraphCacheEntry(folder, docs);
-  setGraphDocuments(docs);
-  indexGraphDocumentsInBackground(docs);
-  return docs;
+
+  graphCatalogInFlight = (async () => {
+    const folder = await resolveSharePointFolder();
+    const docs = await listAllSharePointFiles(folder.driveId, folder.itemId);
+    setGraphCacheEntry(folder, docs);
+    setGraphDocuments(docs);
+    indexGraphDocumentsInBackground(docs);
+    return docs;
+  })();
+
+  try {
+    return await graphCatalogInFlight;
+  } finally {
+    graphCatalogInFlight = null;
+  }
 }
 
 /**
@@ -458,10 +488,12 @@ async function indexGraphDocumentsInBackground(docs) {
  * unavailable — the rest of the site keeps working either way.
  */
 async function initGraphCatalog() {
+  if (typeof setGraphLoadState === "function") setGraphLoadState("loading");
   try {
     await loadGraphCatalog();
   } catch (e) {
     console.warn("Could not load the live SharePoint catalog via Microsoft Graph — using the built-in document list instead.", e);
+    if (typeof setGraphLoadState === "function") setGraphLoadState("failed");
   }
 }
 
@@ -486,3 +518,95 @@ async function retryGraphConnection() {
     throw e;
   }
 }
+
+/* ---------------- sending email directly via Graph (no mail app) ---------------- */
+
+const MAX_EMAIL_ATTACHMENT_BYTES = 3 * 1024 * 1024; // ~3MB — Graph's simple sendMail attachment limit in practice; bigger files need the separate large-attachment upload-session API, not implemented here
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // reader.result is "data:<mime>;base64,<data>" — Graph wants just the data part
+      const commaIndex = reader.result.indexOf(",");
+      resolve(reader.result.slice(commaIndex + 1));
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Sends a real email as the signed-in user via Microsoft Graph's
+ * /me/sendMail — no mail app, no mailto: link, no "choose an app" dialog.
+ * If a file is provided (and under MAX_EMAIL_ATTACHMENT_BYTES), it's
+ * attached for real, as actual attachment bytes Graph sends along with the
+ * message — not something the person has to manually attach themselves.
+ */
+/**
+ * Token acquisition for Mail.Send only — deliberately separate from
+ * getGraphToken()/GRAPH_SCOPES above. Two important differences from that
+ * shared, background-safe path:
+ * 1. It only ever runs as the direct result of someone clicking Send, never
+ *    automatically in the background — so an interactive consent popup
+ *    here is expected and appropriate, not a surprise interruption.
+ * 2. It does NOT use the "only ever try once" caching the background path
+ *    uses — if Mail.Send isn't granted yet, every Send click gets a fresh
+ *    attempt (so it starts working immediately once an admin grants it,
+ *    without needing to clear any cached "already tried" flag first).
+ */
+async function getMailSendToken() {
+  if (typeof msalInstance === "undefined" || !msalInstance) throw new Error("MSAL is not initialized (SSO not configured).");
+  if (typeof msalReady !== "undefined") await msalReady;
+  const account = (typeof getActiveAccount === "function") ? getActiveAccount() : null;
+  if (!account) throw new Error("Not signed in.");
+  const request = { scopes: ["Mail.Send"], account };
+  try {
+    const result = await msalInstance.acquireTokenSilent(request);
+    return result.accessToken;
+  } catch (silentError) {
+    console.warn("Silent Mail.Send token acquisition failed — trying an interactive prompt. This is a direct result of clicking Send, so a popup here is expected, not a background surprise.", silentError);
+    const result = await msalInstance.acquireTokenPopup(request);
+    return result.accessToken;
+  }
+}
+
+async function sendDocumentEmail({ toAddress, subject, bodyText, file }) {
+  const message = {
+    subject,
+    body: { contentType: "Text", content: bodyText },
+    toRecipients: [{ emailAddress: { address: toAddress } }]
+  };
+
+  let attachmentSkipped = false;
+  if (file) {
+    if (file.size > MAX_EMAIL_ATTACHMENT_BYTES) {
+      attachmentSkipped = true;
+    } else {
+      const contentBytes = await fileToBase64(file);
+      message.attachments = [{
+        "@odata.type": "#microsoft.graph.fileAttachment",
+        name: file.name,
+        contentType: file.type || "application/octet-stream",
+        contentBytes
+      }];
+    }
+  }
+
+  const token = await getMailSendToken();
+  const res = await fetch(GRAPH_BASE + "/me/sendMail", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ message, saveToSentItems: true })
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Graph request failed (${res.status} ${res.statusText}): ${text.slice(0, 300)}`);
+  }
+
+  return { attachmentSkipped };
+}
+

@@ -886,8 +886,23 @@ function bumpDownload(docId) {
 // Graph not configured, or still loading), getAllDocuments() falls back to
 // the static seed catalog below, so the site always shows something.
 let GRAPH_DOCS = null;
+// "idle" | "loading" | "loaded" | "failed" — lets render functions show an
+// honest "loading" state instead of flashing the wrong seed-catalog content
+// and then silently swapping it out once the real data arrives.
+let GRAPH_LOAD_STATE = "idle";
+
+function setGraphLoadState(state) {
+  GRAPH_LOAD_STATE = state;
+  refreshDocViews();
+}
+
+function isGraphStillLoading() {
+  return typeof SSO_ENABLED !== "undefined" && SSO_ENABLED && GRAPH_LOAD_STATE === "loading" && !GRAPH_DOCS;
+}
+
 function setGraphDocuments(list) {
   GRAPH_DOCS = list;
+  GRAPH_LOAD_STATE = "loaded";
   refreshDocViews();
   if (typeof renderMetrics === "function") renderMetrics();
 }
@@ -897,7 +912,11 @@ function getAllDocuments() {
   const counts = getDownloadCounts();
 
   let base;
-  if (GRAPH_DOCS && GRAPH_DOCS.length) {
+  if (GRAPH_DOCS !== null) {
+    // A real Graph load has completed — use it even if it found zero
+    // files, rather than incorrectly falling back to the seed catalog
+    // (an empty array here is a legitimate "nothing here" result, not
+    // "hasn't loaded yet").
     // Real documents fetched live from SharePoint via Microsoft Graph.
     base = GRAPH_DOCS.map(d => ({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
   } else {
@@ -933,7 +952,7 @@ function getDocsForStory(code) {
  * real, but the mailto fallback is still worth keeping for anyone without
  * SharePoint access.
  */
-const COE_INTAKE_EMAIL = "treat@testingxperts.com";
+const COE_INTAKE_EMAIL = "Treat@testingxperts.com";
 
 const PILLAR_FOLDERS = {
   "01": "docs/01-standards",
@@ -1100,7 +1119,7 @@ function initRegisterForm() {
       (status === "ok" ? " · 🔍 indexed for search" : "");
   });
 
-  function buildEmail() {
+  function buildEmailContent() {
     const name = docNameInput.value.trim() || "(untitled document)";
     const contributor = nameInput.value.trim() || "(not provided)";
     const contributorEmail = emailInput.value.trim();
@@ -1108,7 +1127,6 @@ function initRegisterForm() {
     const tags = document.getElementById("rfTags").value.trim();
     const pillar = pillarSelect.value;
     const story = storySelect.value;
-    const file = fileInput.files[0];
     const folder = suggestedFolder(pillar, story);
 
     const subject = "TREAT COE Document Submission: " + name;
@@ -1123,26 +1141,54 @@ function initRegisterForm() {
     body += "Labels/tags: " + (tags || "none") + "\n";
     if (folder) body += "Suggested SharePoint folder: " + folder + "\n";
     if (desc) body += "\nDescription:\n" + desc + "\n";
-    body += "\n----------------------------------------\n";
-    body += file
-      ? ("REMINDER: attach \"" + file.name + "\" to this email before sending — a webpage can't attach it automatically.\n")
-      : "REMINDER: attach your document file(s) to this email before sending.\n";
     return { subject, body };
   }
 
   form.addEventListener("submit", (e) => e.preventDefault());
 
   if (sendBtn) {
-    sendBtn.addEventListener("click", () => {
+    sendBtn.addEventListener("click", async () => {
       if (!docNameInput.value.trim() && !fileInput.files.length) {
         alert("Please enter a document name or attach a file before sending.");
         return;
       }
-      const { subject, body } = buildEmail();
-      const mailto = "mailto:" + COE_INTAKE_EMAIL + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-      // Exposed for testing/inspection; the real action is the navigation below.
-      window.__lastMailto = mailto;
-      window.location.href = mailto;
+      if (typeof sendDocumentEmail !== "function") {
+        alert("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.");
+        return;
+      }
+
+      const { subject, body } = buildEmailContent();
+      const file = fileInput.files[0] || null;
+      const originalLabel = sendBtn.textContent;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending…";
+
+      try {
+        const { attachmentSkipped } = await sendDocumentEmail({
+          toAddress: COE_INTAKE_EMAIL,
+          subject,
+          bodyText: body,
+          file
+        });
+        clearPendingAttachment();
+        form.reset();
+        fileNameLabel.textContent = "";
+        if (attachmentSkipped) {
+          alert("Sent — but the attached file was too large to include automatically (over 3MB) and was left out. Please share it separately.");
+        } else {
+          alert("Sent — your document submission was emailed to " + COE_INTAKE_EMAIL + (file ? " with the file attached." : "."));
+        }
+      } catch (e) {
+        console.error("Sending the document submission email failed:", e);
+        alert(
+          "Couldn't send automatically: " + (e && e.message ? e.message : e) +
+          "\n\nThis usually means Microsoft sign-in hasn't granted mail-sending permission yet — " +
+          "try signing out and back in, or check with your admin if this keeps happening."
+        );
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = originalLabel;
+      }
     });
   }
 }
@@ -1196,6 +1242,18 @@ async function openDocument(doc) {
   // (before that lookup) to preserve the click's user-gesture, then
   // navigate it once resolved.
   const win = window.open("", "_blank");
+  if (win) {
+    try {
+      win.document.write(
+        '<!doctype html><title>Loading…</title>' +
+        '<body style="font-family:-apple-system,Segoe UI,Arial,sans-serif;' +
+        'display:flex;align-items:center;justify-content:center;height:100vh;' +
+        'margin:0;color:#5B6B76;background:#f5f7fb;font-size:15px;">' +
+        'Looking up "' + escapeHtml(doc.name) + '" in SharePoint…' +
+        '</body>'
+      );
+    } catch (e) { /* not critical if this fails, just cosmetic */ }
+  }
 
   if (typeof findRealDocumentByName === "function") {
     try {
@@ -1442,6 +1500,12 @@ function initHeroSearch() {
 function renderQuickLinks() {
   const root = document.getElementById("quickLinks");
   if (!root) return;
+
+  if (isGraphStillLoading()) {
+    root.innerHTML = `<div class="ql-empty">📡 Loading your documents from SharePoint…</div>`;
+    return;
+  }
+
   const all = getAllDocuments();
 
   const featured = all.filter(d => d.featured).slice(0, 4);
@@ -1470,6 +1534,10 @@ function renderDocumentsPage() {
   const pillarSelect = document.getElementById("docPillarFilter");
 
   function draw() {
+    if (isGraphStillLoading()) {
+      root.innerHTML = `<div class="results-empty">📡 Loading your documents from SharePoint…</div>`;
+      return;
+    }
     const q = searchBox ? searchBox.value : "";
     const pillar = pillarSelect ? pillarSelect.value : "All";
     let list = q ? searchAll(q, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
@@ -1554,8 +1622,14 @@ function renderStoryDocSections() {
   document.querySelectorAll("[data-story-docs]").forEach(container => {
     const code = container.getAttribute("data-story-docs");
     const story = STORIES.find(s => s.code === code);
-    const docs = getDocsForStory(code);
     const registerHref = `register-document.html?pillar=${story ? story.pillarCode : ""}&story=${code}`;
+
+    if (isGraphStillLoading()) {
+      container.innerHTML = `<h4>Documents for this deliverable</h4><div class="ql-empty">📡 Loading your documents from SharePoint…</div>`;
+      return;
+    }
+
+    const docs = getDocsForStory(code);
     container.innerHTML = `
       <h4>Documents for this deliverable</h4>
       ${docs.length ? docs.map(docRowHtml).join("") : `<div class="ql-empty">No documents linked yet.</div>`}
