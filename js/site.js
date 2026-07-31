@@ -874,6 +874,29 @@ function getUserDocs() { return lsGet(LS.userDocs, []); }
 function saveUserDocs(arr) { lsSet(LS.userDocs, arr); }
 function getSeedOverrides() { return lsGet(LS.seedOverrides, {}); }
 function saveSeedOverrides(obj) { lsSet(LS.seedOverrides, obj); }
+
+// Unified, name-keyed override store: tags (and who/when last touched them)
+// for ANY document, looked up by its name rather than its id. This matters
+// because a document's id changes depending on where it's currently coming
+// from (a "seed" placeholder id before Graph loads, a "graph-..." id once
+// it's found for real) — but its NAME stays the same throughout. Keying by
+// name means: (1) tagging a document works correctly regardless of which
+// source it's currently being shown from, and (2) tags entered while
+// registering a brand new document (before it even exists in SharePoint
+// yet) are remembered and automatically applied the moment a real document
+// with that same name shows up later, with no extra step needed.
+const DOC_NAME_OVERRIDES_KEY = "eatcoe_doc_name_overrides";
+function normalizeDocName(name) { return (name || "").trim().toLowerCase(); }
+function getDocNameOverrides() { return lsGet(DOC_NAME_OVERRIDES_KEY, {}); }
+function saveDocNameOverrides(obj) { lsSet(DOC_NAME_OVERRIDES_KEY, obj); }
+function getDocNameOverride(name) { return getDocNameOverrides()[normalizeDocName(name)] || null; }
+function setDocTagsOverride(name, tags) {
+  const overrides = getDocNameOverrides();
+  const key = normalizeDocName(name);
+  const today = new Date().toISOString().slice(0, 10);
+  overrides[key] = { ...(overrides[key] || {}), tags, lastModifiedBy: getUserName(), lastModifiedDate: today };
+  saveDocNameOverrides(overrides);
+}
 function getDownloadCounts() { return lsGet(LS.downloads, {}); }
 function bumpDownload(docId) {
   const counts = getDownloadCounts();
@@ -908,8 +931,17 @@ function setGraphDocuments(list) {
 }
 
 function getAllDocuments() {
-  const overrides = getSeedOverrides();
   const counts = getDownloadCounts();
+  const applyNameOverride = (d) => {
+    const o = getDocNameOverride(d.name);
+    if (!o) return d;
+    return {
+      ...d,
+      tags: o.tags || d.tags,
+      lastModifiedBy: o.lastModifiedBy || d.lastModifiedBy,
+      lastModifiedDate: o.lastModifiedDate || d.lastModifiedDate
+    };
+  };
 
   let base;
   if (GRAPH_DOCS !== null) {
@@ -918,23 +950,14 @@ function getAllDocuments() {
     // (an empty array here is a legitimate "nothing here" result, not
     // "hasn't loaded yet").
     // Real documents fetched live from SharePoint via Microsoft Graph.
-    base = GRAPH_DOCS.map(d => ({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
+    base = GRAPH_DOCS.map(d => applyNameOverride({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
   } else {
-    base = SEED_DOCS.map(d => {
-      const o = overrides[d.id] || {};
-      return {
-        ...d,
-        tags: o.tags || d.tags,
-        lastModifiedBy: o.lastModifiedBy || d.lastModifiedBy,
-        lastModifiedDate: o.lastModifiedDate || d.lastModifiedDate,
-        downloads: d.downloads + (counts[d.id] || 0)
-      };
-    });
+    base = SEED_DOCS.map(d => applyNameOverride({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
   }
 
-  const user = getUserDocs().map(d => ({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
+  const user = getUserDocs().map(d => applyNameOverride({ ...d, downloads: d.downloads + (counts[d.id] || 0) }));
   const pending = getPendingAttachment();
-  return [...base, ...user, ...(pending ? [pending] : [])];
+  return [...base, ...user, ...(pending ? [applyNameOverride(pending)] : [])];
 }
 
 function getDocsForStory(code) {
@@ -1093,6 +1116,32 @@ function initRegisterForm() {
 
   pillarSelect.addEventListener("change", populateStoryOptions);
 
+  const tagsInput = document.getElementById("rfTags");
+
+  function currentTagsArray() {
+    return tagsInput.value.split(",").map(t => t.trim()).filter(Boolean);
+  }
+
+  // Persists whatever tags/name are currently in the form against the
+  // document's name, and refreshes the pending-attachment preview to
+  // match — called whenever either field changes, and again right before
+  // sending, so the final state is always captured regardless of the
+  // order someone fills things in.
+  function syncTagsAndPendingPreview() {
+    const name = docNameInput.value.trim();
+    const tags = currentTagsArray();
+    if (name && tags.length) {
+      setDocTagsOverride(name, tags);
+    }
+    const pending = getPendingAttachment();
+    if (pending) {
+      savePendingAttachment({ ...pending, name: name || pending.name, tags });
+    }
+  }
+
+  tagsInput.addEventListener("input", syncTagsAndPendingPreview);
+  docNameInput.addEventListener("input", syncTagsAndPendingPreview);
+
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files[0];
     if (!file) { clearPendingAttachment(); fileNameLabel.textContent = ""; return; }
@@ -1102,18 +1151,21 @@ function initRegisterForm() {
 
     const { text, status } = await extractFullText(file);
     const today = new Date().toISOString().slice(0, 10);
+    const name = docNameInput.value || file.name;
+    const tags = currentTagsArray();
     savePendingAttachment({
       id: "pending-attachment", type: "document", sourceType: "pending",
-      name: docNameInput.value || file.name,
+      name,
       pillarCode: pillarSelect.value || null, pillar: PILLAR_NAMES[pillarSelect.value] || null,
       storyCode: storySelect.value || null,
-      tags: [], downloads: 0, featured: false,
+      tags, downloads: 0, featured: false,
       uploadedBy: nameInput.value || getUserName(), uploadDate: today,
       lastModifiedBy: nameInput.value || getUserName(), lastModifiedDate: today,
       url: "register-document.html",
       location: "📋 Pending submission — attached here, not yet emailed",
       fullText: text, fullTextStatus: status
     });
+    if (tags.length) setDocTagsOverride(name, tags);
 
     fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
       (status === "ok" ? " · 🔍 indexed for search" : "");
@@ -1156,6 +1208,7 @@ function initRegisterForm() {
         alert("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.");
         return;
       }
+      syncTagsAndPendingPreview();
 
       const { subject, body } = buildEmailContent();
       const file = fileInput.files[0] || null;
@@ -1198,14 +1251,18 @@ function deleteUserDocument(id) {
 }
 
 function updateDocTags(doc, newTags) {
-  const today = new Date().toISOString().slice(0, 10);
-  if (doc.sourceType === "seed") {
-    const overrides = getSeedOverrides();
-    overrides[doc.id] = { tags: newTags, lastModifiedBy: getUserName(), lastModifiedDate: today };
-    saveSeedOverrides(overrides);
-  } else {
+  if (doc.sourceType === "user") {
+    // Locally-registered placeholder entries are simple, directly-owned
+    // objects — just mutate them in place.
+    const today = new Date().toISOString().slice(0, 10);
     const docs = getUserDocs().map(d => d.id === doc.id ? { ...d, tags: newTags, lastModifiedBy: getUserName(), lastModifiedDate: today } : d);
     saveUserDocs(docs);
+  } else {
+    // Seed placeholders AND real Graph-sourced documents both go through
+    // the unified name-based override store — this is what actually makes
+    // "Add tag" work on real documents, which previously fell through to
+    // an id-based lookup that could never match them.
+    setDocTagsOverride(doc.name, newTags);
   }
   logActivity("tag", doc.name);
 }
