@@ -64,8 +64,8 @@
 
       <div class="callout" style="margin-top:0">
         <h4>How this works</h4>
-        <p>Fill in the details below, click <b>📎 Choose file</b> to attach it from your computer, then hit <b>📧
-          Send</b> — the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
+        <p>Fill in the details below, click <b>Choose file</b> to attach it from your computer, then hit <b> Send</b> —
+          the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
           account), with the file genuinely attached. No mail app opens, and there's nothing further to do — the COE
           team receives it and files it into the right SharePoint folder based on the pillar/labels you chose.
           (Files over 3MB can't be attached automatically — you'll be told if that happens, so you can share it
@@ -89,7 +89,8 @@
             </div>
             <div class="reg-field">
               <label>Description <span class="reg-optional">(optional)</span></label>
-              <textarea id="rfDescription" rows="3" placeholder="What is this document and why does it belong in the repository?"></textarea>
+              <textarea id="rfDescription" rows="3"
+                placeholder="What is this document and why does it belong in the repository?"></textarea>
             </div>
             <div class="reg-field-row">
               <div class="reg-field">
@@ -105,22 +106,28 @@
               </div>
               <div class="reg-field">
                 <label>Related story <span class="reg-optional">(optional)</span></label>
-                <select id="rfStory"><option value="">No specific story</option></select>
+                <select id="rfStory">
+                  <option value="">No specific story</option>
+                </select>
               </div>
             </div>
             <div class="reg-field">
-              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right folder)</span></label>
+              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right
+                  folder)</span></label>
               <input type="text" id="rfTags" placeholder="e.g. automation, regression, checklist">
             </div>
             <div class="reg-field">
               <label>Attach a file</label>
               <div class="reg-file-row">
-                <label class="signin-btn reg-attach-btn" for="rfFile" style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
+                <label class="signin-btn reg-attach-btn" for="rfFile"
+                  style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
                 <input type="file" id="rfFile" style="display:none">
                 <span id="rfFileName" class="reg-filename"></span>
-                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn" style="background:var(--teal);color:#fff">📧 Send</button>
+                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn"
+                  style="background:var(--teal);color:#fff">Send</button>
               </div>
-              <p class="uf-note" style="margin-top:10px">Sending emails it immediately as you — no mail app opens, and the file you attach is sent along with it for real.</p>
+              <p class="uf-note" style="margin-top:10px">Sending emails it immediately as you — no mail app opens, and
+                the file you attach is sent along with it for real.</p>
             </div>
           </form>
         </div>
