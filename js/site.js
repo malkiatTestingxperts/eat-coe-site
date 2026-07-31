@@ -1612,7 +1612,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"> full-text indexed</span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"> </span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1669,8 +1669,20 @@ function handleDeleteDoc(id) {
   refreshDocViews();
 }
 function refreshDocViews() {
-  renderDocumentsPage();
-  renderStoryDocSections();
+  // Background events (like full-text indexing finishing one file at a
+  // time) call this repeatedly — each call replaces the document rows'
+  // HTML wholesale, which destroys and recreates any input inside them,
+  // including whatever a person is actively typing into an "add tag" box.
+  // If that's currently focused, skip re-rendering the rows this time
+  // (their content will simply catch up on the next refresh, e.g. right
+  // after "Add tag" is clicked) — Quick Links doesn't contain any inputs,
+  // so it's always safe to update.
+  const active = document.activeElement;
+  const isEditingTagInput = !!(active && active.id && active.id.indexOf("newtag-") === 0);
+  if (!isEditingTagInput) {
+    renderDocumentsPage();
+    renderStoryDocSections();
+  }
   renderQuickLinks();
 }
 
