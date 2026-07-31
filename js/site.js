@@ -933,7 +933,7 @@ function getDocsForStory(code) {
  * real, but the mailto fallback is still worth keeping for anyone without
  * SharePoint access.
  */
-const COE_INTAKE_EMAIL = "Treat@testingxperts.com";
+const COE_INTAKE_EMAIL = "treat@testingxperts.com";
 
 const PILLAR_FOLDERS = {
   "01": "docs/01-standards",
