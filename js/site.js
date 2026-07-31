@@ -515,9 +515,9 @@ const SEED_DOCS = [
       "compliance",
       "rtm"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 58,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": true,
     "type": "document",
     "sourceType": "seed"
@@ -537,9 +537,9 @@ const SEED_DOCS = [
       "metrics",
       "dashboard"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 41,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": false,
     "type": "document",
     "sourceType": "seed"
@@ -559,9 +559,9 @@ const SEED_DOCS = [
       "monitoring",
       "escalation"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 33,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": false,
     "type": "document",
     "sourceType": "seed"
@@ -580,9 +580,9 @@ const SEED_DOCS = [
       "versioning",
       "change control"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 19,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": false,
     "type": "document",
     "sourceType": "seed"
@@ -601,9 +601,9 @@ const SEED_DOCS = [
       "continuous improvement",
       "action log"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 47,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": false,
     "type": "document",
     "sourceType": "seed"
@@ -623,9 +623,9 @@ const SEED_DOCS = [
       "trend analysis",
       "rca"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 62,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": true,
     "type": "document",
     "sourceType": "seed"
@@ -644,9 +644,9 @@ const SEED_DOCS = [
       "knowledge management",
       "repository"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 29,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": true,
     "type": "document",
     "sourceType": "seed"
@@ -666,9 +666,9 @@ const SEED_DOCS = [
       "domain knowledge",
       "sme"
     ],
-    "url": "https://txplin.sharepoint.com/:f:/s/DigitalBanking/IgCYGuPe89-RRaiIMVPoFOy-AVkT3yBTWBOcsZ4esISUN84?e=3udilP",
+    "url": SHAREPOINT_FOLDER_URL,
     "downloads": 22,
-    "location": "SharePoint · DigitalBanking",
+    "location": "SharePoint (shared folder)",
     "featured": false,
     "type": "document",
     "sourceType": "seed"
