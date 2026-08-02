@@ -893,8 +893,12 @@ function getDocNameOverride(name) { return getDocNameOverrides()[normalizeDocNam
 function setDocTagsOverride(name, tags) {
   const overrides = getDocNameOverrides();
   const key = normalizeDocName(name);
-  const today = new Date().toISOString().slice(0, 10);
-  overrides[key] = { ...(overrides[key] || {}), tags, lastModifiedBy: getUserName(), lastModifiedDate: today };
+  // Deliberately does NOT stamp lastModifiedBy/lastModifiedDate — adding a
+  // tag is a local annotation, not a real change to the document itself,
+  // so it shouldn't look like the file was "modified," and critically,
+  // it must never affect sort order (see getAllDocuments below) — that's
+  // what was causing rows to jump to the top the moment a tag was added.
+  overrides[key] = { ...(overrides[key] || {}), tags };
   saveDocNameOverrides(overrides);
 }
 function getDownloadCounts() { return lsGet(LS.downloads, {}); }
@@ -913,14 +917,37 @@ let GRAPH_DOCS = null;
 // honest "loading" state instead of flashing the wrong seed-catalog content
 // and then silently swapping it out once the real data arrives.
 let GRAPH_LOAD_STATE = "idle";
+// Only actually SHOW the loading UI once this grace period has passed with
+// no result yet — a fast, normal load (the common case) never flashes any
+// loading message at all; content just appears once ready. Only a
+// genuinely slow load (network glitch, high latency) reveals it.
+const GRAPH_LOADING_UI_DELAY_MS = 600;
+let graphLoadingUIDelayTimer = null;
+let showGraphLoadingUI = false;
 
 function setGraphLoadState(state) {
   GRAPH_LOAD_STATE = state;
+  clearTimeout(graphLoadingUIDelayTimer);
+  if (state === "loading") {
+    showGraphLoadingUI = false;
+    graphLoadingUIDelayTimer = setTimeout(() => {
+      if (GRAPH_LOAD_STATE === "loading") {
+        showGraphLoadingUI = true;
+        refreshDocViews();
+      }
+    }, GRAPH_LOADING_UI_DELAY_MS);
+  } else {
+    showGraphLoadingUI = false;
+  }
   refreshDocViews();
 }
 
 function isGraphStillLoading() {
-  return typeof SSO_ENABLED !== "undefined" && SSO_ENABLED && GRAPH_LOAD_STATE === "loading" && !GRAPH_DOCS;
+  return typeof SSO_ENABLED !== "undefined" && SSO_ENABLED && GRAPH_LOAD_STATE === "loading" && !GRAPH_DOCS && showGraphLoadingUI;
+}
+
+function graphLoadingHtml(label) {
+  return `<div class="doc-loading"><span class="doc-loading-spinner"></span>${escapeHtml(label || "Fetching your documents from SharePoint…")}</div>`;
 }
 
 function setGraphDocuments(list) {
@@ -935,12 +962,10 @@ function getAllDocuments() {
   const applyNameOverride = (d) => {
     const o = getDocNameOverride(d.name);
     if (!o) return d;
-    return {
-      ...d,
-      tags: o.tags || d.tags,
-      lastModifiedBy: o.lastModifiedBy || d.lastModifiedBy,
-      lastModifiedDate: o.lastModifiedDate || d.lastModifiedDate
-    };
+    // Only tags are merged in — lastModifiedBy/lastModifiedDate stay as
+    // the document's real, stable SharePoint values, so tagging can never
+    // shift where it sorts in the list (see setDocTagsOverride above).
+    return { ...d, tags: o.tags || d.tags };
   };
 
   let base;
@@ -1168,7 +1193,7 @@ function initRegisterForm() {
     if (tags.length) setDocTagsOverride(name, tags);
 
     fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
-      (status === "ok" ? " ·  indexed for search" : "");
+      (status === "ok" ? " · 🔍 indexed for search" : "");
   });
 
   function buildEmailContent() {
@@ -1501,11 +1526,48 @@ function filterPillar(code, btn) {
   runHeroSearch();
 }
 
+function getAllKnownTags() {
+  const tagSet = new Set();
+  getAllDocuments().forEach(d => (d.tags || []).forEach(t => { if (t) tagSet.add(t); }));
+  return [...tagSet].sort((a, b) => a.localeCompare(b));
+}
+
+function selectTagFromSuggestion(tag) {
+  const input = document.getElementById("searchInput");
+  if (!input) return;
+  input.value = tag;
+  runHeroSearch();
+  input.focus();
+}
+
 function runHeroSearch() {
   const box = document.getElementById("heroResults");
   const input = document.getElementById("searchInput");
   if (!box || !input) return;
   const q = input.value.trim();
+
+  if (q.startsWith("#")) {
+    // Tag-browsing mode: show all known tags (filtered by whatever comes
+    // after the #, if anything) as clickable suggestions, rather than
+    // running a normal search — lets people discover available tags
+    // instead of needing to already know exact tag names.
+    const partial = q.slice(1).trim().toLowerCase();
+    const allTags = getAllKnownTags();
+    const matches = partial ? allTags.filter(t => t.toLowerCase().includes(partial)) : allTags;
+    box.classList.add("show");
+    if (!allTags.length) {
+      box.innerHTML = `<div class="results-empty">No tags exist yet — tag a document (via Add Tag) to start building this list.</div>`;
+    } else if (!matches.length) {
+      box.innerHTML = `<div class="results-empty">No tags match "${escapeHtml(partial)}".</div>`;
+    } else {
+      box.innerHTML = `
+        <div class="tag-suggest-hint">Browsing tags — click one to search by it</div>
+        <div class="tag-suggest-list">
+          ${matches.map(t => `<button type="button" class="tag-suggest-pill" onclick='selectTagFromSuggestion(${JSON.stringify(t)})'>#${escapeHtml(t)}</button>`).join("")}
+        </div>`;
+    }
+    return;
+  }
 
   if (!q && activePillar === "All") {
     box.classList.remove("show");
@@ -1531,7 +1593,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">🔍 Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -1559,24 +1621,27 @@ function renderQuickLinks() {
   if (!root) return;
 
   if (isGraphStillLoading()) {
-    root.innerHTML = `<div class="ql-empty">📡 Loading your documents from SharePoint…</div>`;
+    root.innerHTML = graphLoadingHtml();
     return;
   }
 
   const all = getAllDocuments();
 
-  const featured = all.filter(d => d.featured).slice(0, 4);
+  // "Featured" = tagged "featured" (case-insensitive) — reuses the existing
+  // Add Tag mechanism, so any Contributor can curate this list just by
+  // tagging a document, with no separate feature/admin panel needed.
+  const featured = all.filter(d => (d.tags || []).some(t => t.toLowerCase() === "featured")).slice(0, 4);
   const mostDownloaded = [...all].sort((a, b) => b.downloads - a.downloads).slice(0, 4);
   const recentlyModified = [...all].sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || "")).slice(0, 4);
 
-  const col = (title, items, sub) => `
+  const col = (title, items, sub, emptyMessage) => `
     <div class="ql-card">
       <h4>${title}</h4>
-      ${items.length ? `<ul>${items.map(d => `<li><a href="#" onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")});return false;'>${escapeHtml(d.name)}</a><span>${sub(d)}</span></li>`).join("")}</ul>` : `<div class="ql-empty">Nothing here yet.</div>`}
+      ${items.length ? `<ul>${items.map(d => `<li><a href="#" onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")});return false;'>${escapeHtml(d.name)}</a><span>${sub(d)}</span></li>`).join("")}</ul>` : `<div class="ql-empty">${emptyMessage || "Nothing here yet."}</div>`}
     </div>`;
 
   root.innerHTML = [
-    col("Featured Documents", featured, d => d.pillar || "General"),
+    col("Featured Documents", featured, d => d.pillar || "General", 'Tag a document "featured" (via Add Tag) to feature it here.'),
     col("Most Downloaded", mostDownloaded, d => d.downloads + " opens"),
     col("Recently Modified", recentlyModified, d => "Updated " + d.lastModifiedDate)
   ].join("");
@@ -1592,7 +1657,7 @@ function renderDocumentsPage() {
 
   function draw() {
     if (isGraphStillLoading()) {
-      root.innerHTML = `<div class="results-empty">📡 Loading your documents from SharePoint…</div>`;
+      root.innerHTML = graphLoadingHtml();
       return;
     }
     const q = searchBox ? searchBox.value : "";
@@ -1612,7 +1677,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"> </span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1625,10 +1690,10 @@ function docRowHtml(d) {
   return `
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
-        <div class="dr-name">📄 ${escapeHtml(d.name)} ${d.featured ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
+        <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -1694,7 +1759,7 @@ function renderStoryDocSections() {
     const registerHref = `register-document.html?pillar=${story ? story.pillarCode : ""}&story=${code}`;
 
     if (isGraphStillLoading()) {
-      container.innerHTML = `<h4>Documents for this deliverable</h4><div class="ql-empty">📡 Loading your documents from SharePoint…</div>`;
+      container.innerHTML = `<h4>Documents for this deliverable</h4>` + graphLoadingHtml();
       return;
     }
 
@@ -1833,7 +1898,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px"> “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });
