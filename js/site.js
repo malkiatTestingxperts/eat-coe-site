@@ -1193,7 +1193,7 @@ function initRegisterForm() {
     if (tags.length) setDocTagsOverride(name, tags);
 
     fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
-      (status === "ok" ? " · 🔍 indexed for search" : "");
+      (status === "ok" ? " · " : "");
   });
 
   function buildEmailContent() {
@@ -1677,7 +1677,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }

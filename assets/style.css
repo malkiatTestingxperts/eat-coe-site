@@ -2408,13 +2408,16 @@ body.role-contributor .viewer-only {
 
 .reg-send-btn,
 #sendBtn {
-  margin-left: auto;
   flex: 0 0 auto;
-  width: 12px;
   min-width: 90px;
   padding: 8px 18px;
   font-size: 14px;
   white-space: nowrap;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
 }
 
 .login-heading {
