@@ -1490,6 +1490,7 @@ function searchAll(query, { pillar = "All", typeFilter = "All" } = {}) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  loadStoredTags(); // fire-and-forget — fast, same-origin fetch; ready well before anyone types "#"
   ensureSeedActivity();
   initRoleSwitcher();
   initNavDropdowns();
@@ -1526,8 +1527,27 @@ function filterPillar(code, btn) {
   runHeroSearch();
 }
 
+// Curated base vocabulary of tags (data/tags.json) — maintained as a plain
+// data file so tags can be added/edited without touching code. Merged with
+// whatever tags actually exist on real documents right now, so the #
+// browser shows a useful list from day one, before anyone's tagged
+// anything, while still picking up genuinely new tags people add later.
+let STORED_TAGS = [];
+async function loadStoredTags() {
+  try {
+    const res = await fetch("data/tags.json");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const list = await res.json();
+    STORED_TAGS = Array.isArray(list) ? list.filter(Boolean) : [];
+  } catch (e) {
+    console.warn("Could not load data/tags.json — the # tag browser will only show tags currently in use on documents.", e);
+    STORED_TAGS = [];
+  }
+}
+
 function getAllKnownTags() {
   const tagSet = new Set();
+  STORED_TAGS.forEach(t => { if (t) tagSet.add(t); });
   getAllDocuments().forEach(d => (d.tags || []).forEach(t => { if (t) tagSet.add(t); }));
   return [...tagSet].sort((a, b) => a.localeCompare(b));
 }
@@ -1538,6 +1558,30 @@ function selectTagFromSuggestion(tag) {
   input.value = tag;
   runHeroSearch();
   input.focus();
+}
+
+/**
+ * Renders the "# tag browser" HTML for a given query — shared by the Home
+ * hero search and the Documents page search, so both behave identically.
+ * `onSelectFnName` is the name of a global function to call (with the
+ * chosen tag) when a suggestion is clicked — different for each search box
+ * since they need to update different inputs.
+ */
+function renderTagSuggestionsHtml(query, onSelectFnName) {
+  const partial = query.slice(1).trim().toLowerCase();
+  const allTags = getAllKnownTags();
+  const matches = partial ? allTags.filter(t => t.toLowerCase().includes(partial)) : allTags;
+  if (!allTags.length) {
+    return `<div class="results-empty">No tags exist yet — tag a document (via Add Tag) to start building this list.</div>`;
+  }
+  if (!matches.length) {
+    return `<div class="results-empty">No tags match "${escapeHtml(partial)}".</div>`;
+  }
+  return `
+    <div class="tag-suggest-hint">Browsing tags — click one to search by it</div>
+    <div class="tag-suggest-list">
+      ${matches.map(t => `<button type="button" class="tag-suggest-pill" onclick='${onSelectFnName}(${JSON.stringify(t)})'>#${escapeHtml(t)}</button>`).join("")}
+    </div>`;
 }
 
 function runHeroSearch() {
@@ -1551,21 +1595,8 @@ function runHeroSearch() {
     // after the #, if anything) as clickable suggestions, rather than
     // running a normal search — lets people discover available tags
     // instead of needing to already know exact tag names.
-    const partial = q.slice(1).trim().toLowerCase();
-    const allTags = getAllKnownTags();
-    const matches = partial ? allTags.filter(t => t.toLowerCase().includes(partial)) : allTags;
     box.classList.add("show");
-    if (!allTags.length) {
-      box.innerHTML = `<div class="results-empty">No tags exist yet — tag a document (via Add Tag) to start building this list.</div>`;
-    } else if (!matches.length) {
-      box.innerHTML = `<div class="results-empty">No tags match "${escapeHtml(partial)}".</div>`;
-    } else {
-      box.innerHTML = `
-        <div class="tag-suggest-hint">Browsing tags — click one to search by it</div>
-        <div class="tag-suggest-list">
-          ${matches.map(t => `<button type="button" class="tag-suggest-pill" onclick='selectTagFromSuggestion(${JSON.stringify(t)})'>#${escapeHtml(t)}</button>`).join("")}
-        </div>`;
-    }
+    box.innerHTML = renderTagSuggestionsHtml(q, "selectTagFromSuggestion");
     return;
   }
 
@@ -1648,6 +1679,14 @@ function renderQuickLinks() {
 }
 
 /* ---------------- documents.html: full catalog ---------------- */
+function selectTagForDocSearch(tag) {
+  const input = document.getElementById("docSearch");
+  if (!input) return;
+  input.value = tag;
+  input.dispatchEvent(new Event("input"));
+  input.focus();
+}
+
 function renderDocumentsPage() {
   const root = document.getElementById("docCatalog");
   if (!root) return;
@@ -1660,7 +1699,15 @@ function renderDocumentsPage() {
       root.innerHTML = graphLoadingHtml();
       return;
     }
-    const q = searchBox ? searchBox.value : "";
+    const q = searchBox ? searchBox.value.trim() : "";
+
+    if (q.startsWith("#")) {
+      // Same # tag-browsing behavior as the Home page search — click a
+      // suggested tag to search by it.
+      root.innerHTML = renderTagSuggestionsHtml(q, "selectTagForDocSearch");
+      return;
+    }
+
     const pillar = pillarSelect ? pillarSelect.value : "All";
     let list = q ? searchAll(q, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
     list.sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || ""));
@@ -1677,7 +1724,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
