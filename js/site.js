@@ -1661,23 +1661,65 @@ function renderQuickLinks() {
   // "Featured" = tagged "featured" (case-insensitive) — reuses the existing
   // Add Tag mechanism, so any Contributor can curate this list just by
   // tagging a document, with no separate feature/admin panel needed.
-  const featured = all.filter(d => (d.tags || []).some(t => t.toLowerCase() === "featured")).slice(0, 4);
+  let featured = all.filter(d => (d.tags || []).some(t => t.toLowerCase() === "featured")).slice(0, 4);
+  let featuredIsFallback = false;
+
+  if (!featured.length && all.length) {
+    // Nobody's curated this yet — rather than an empty block, show one
+    // representative document per pillar so there's always something
+    // meaningful here, and it never looks broken/unfinished.
+    featured = pickOnePerPillar(all, 4);
+    featuredIsFallback = true;
+  }
+
   const mostDownloaded = [...all].sort((a, b) => b.downloads - a.downloads).slice(0, 4);
   const recentlyModified = [...all].sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || "")).slice(0, 4);
 
-  const col = (title, items, sub, emptyMessage) => `
+  const col = (title, items, sub, emptyMessage, hint) => `
     <div class="ql-card">
       <h4>${title}</h4>
+      ${hint ? `<div class="ql-hint">${hint}</div>` : ""}
       ${items.length ? `<ul>${items.map(d => `<li><a href="#" onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")});return false;'>${escapeHtml(d.name)}</a><span>${sub(d)}</span></li>`).join("")}</ul>` : `<div class="ql-empty">${emptyMessage || "Nothing here yet."}</div>`}
     </div>`;
 
   root.innerHTML = [
-    col("Featured Documents", featured, d => d.pillar || "General", 'Tag a document "featured" (via Add Tag) to feature it here.'),
+    col("Featured Documents", featured, d => d.pillar || "General",
+      'Tag a document "featured" (via Add Tag) to feature it here.',
+      featuredIsFallback ? 'Showing one per pillar — tag a document "featured" to curate this.' : null),
     col("Most Downloaded", mostDownloaded, d => d.downloads + " opens"),
     col("Recently Modified", recentlyModified, d => "Updated " + d.lastModifiedDate)
   ].join("");
 }
 
+/**
+ * Picks up to `count` documents, preferring one from each pillar (in
+ * pillar order) before repeating, so a fallback "featured" list feels like
+ * a representative sample of the whole library rather than an arbitrary
+ * slice.
+ */
+function pickOnePerPillar(docs, count) {
+  const byPillar = {};
+  const unlinked = [];
+  docs.forEach(d => {
+    if (d.pillarCode) {
+      (byPillar[d.pillarCode] = byPillar[d.pillarCode] || []).push(d);
+    } else {
+      unlinked.push(d);
+    }
+  });
+  const pillarOrder = Object.keys(byPillar).sort();
+  const picks = [];
+  for (const p of pillarOrder) {
+    if (picks.length >= count) break;
+    picks.push(byPillar[p][0]);
+  }
+  const remaining = [...pillarOrder.flatMap(p => byPillar[p].slice(1)), ...unlinked];
+  for (const d of remaining) {
+    if (picks.length >= count) break;
+    picks.push(d);
+  }
+  return picks.slice(0, count);
+}
 /* ---------------- documents.html: full catalog ---------------- */
 function selectTagForDocSearch(tag) {
   const input = document.getElementById("docSearch");
