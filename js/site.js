@@ -1624,7 +1624,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">🔍 Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -1660,32 +1660,25 @@ function renderQuickLinks() {
 
   // "Featured" = tagged "featured" (case-insensitive) — reuses the existing
   // Add Tag mechanism, so any Contributor can curate this list just by
-  // tagging a document, with no separate feature/admin panel needed.
+  // tagging a document, with no separate feature/admin panel needed. If
+  // nothing's tagged yet, falls back silently to one doc per pillar so
+  // this block is never empty.
   let featured = all.filter(d => (d.tags || []).some(t => t.toLowerCase() === "featured")).slice(0, 4);
-  let featuredIsFallback = false;
-
   if (!featured.length && all.length) {
-    // Nobody's curated this yet — rather than an empty block, show one
-    // representative document per pillar so there's always something
-    // meaningful here, and it never looks broken/unfinished.
     featured = pickOnePerPillar(all, 4);
-    featuredIsFallback = true;
   }
 
   const mostDownloaded = [...all].sort((a, b) => b.downloads - a.downloads).slice(0, 4);
   const recentlyModified = [...all].sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || "")).slice(0, 4);
 
-  const col = (title, items, sub, emptyMessage, hint) => `
+  const col = (title, items, sub, emptyMessage) => `
     <div class="ql-card">
       <h4>${title}</h4>
-      ${hint ? `<div class="ql-hint">${hint}</div>` : ""}
       ${items.length ? `<ul>${items.map(d => `<li><a href="#" onclick='openDocument(${JSON.stringify(d).replace(/'/g, "&apos;")});return false;'>${escapeHtml(d.name)}</a><span>${sub(d)}</span></li>`).join("")}</ul>` : `<div class="ql-empty">${emptyMessage || "Nothing here yet."}</div>`}
     </div>`;
 
   root.innerHTML = [
-    col("Featured Documents", featured, d => d.pillar || "General",
-      'Tag a document "featured" (via Add Tag) to feature it here.',
-      featuredIsFallback ? 'Showing one per pillar — tag a document "featured" to curate this.' : null),
+    col("Featured Documents", featured, d => d.pillar || "General", 'Tag a document "featured" (via Add Tag) to feature it here.'),
     col("Most Downloaded", mostDownloaded, d => d.downloads + " opens"),
     col("Recently Modified", recentlyModified, d => "Updated " + d.lastModifiedDate)
   ].join("");
@@ -1766,7 +1759,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1782,7 +1775,7 @@ function docRowHtml(d) {
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -1987,7 +1980,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px"> “${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });
