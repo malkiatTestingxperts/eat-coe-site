@@ -1407,6 +1407,14 @@ body.login-page {
     padding: 14px 20px
   }
 
+  .site-header .logo .lt {
+    display: none
+  }
+
+  .footer-text {
+    white-space: normal
+  }
+
   .site-nav {
     position: fixed;
     top: 78px;
@@ -2097,8 +2105,14 @@ body.role-contributor .viewer-only {
   white-space: nowrap
 }
 
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch
+}
+
 .story-table {
   width: 100%;
+  min-width: 620px;
   border-collapse: collapse
 }
 
@@ -2240,7 +2254,6 @@ body.role-contributor .viewer-only {
 .footer-text {
   margin-bottom: 1px;
   line-height: 1.2;
-  white-space: nowrap;
 }
 
 
