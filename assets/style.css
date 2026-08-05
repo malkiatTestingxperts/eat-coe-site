@@ -1597,6 +1597,37 @@ body.login-page {
   gap: 8px
 }
 
+/* When signed in (badge + name + logout are present), rearrange into two
+   rows — role badge on top, username underneath — with Logout aligned
+   beside both. Falls back to the plain row above in any browser without
+   :has() support, so it degrades safely rather than breaking. */
+#authBox:has(.role-badge) {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "badge  logout"
+    "name   logout";
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 4px;
+}
+
+#authBox:has(.role-badge) .role-badge {
+  grid-area: badge;
+  justify-self: start;
+}
+
+#authBox:has(.role-badge) .signed-in-name {
+  grid-area: name;
+  justify-self: start;
+}
+
+#authBox:has(.role-badge) .signout-btn {
+  grid-area: logout;
+  align-self: center;
+}
+
 .signin-btn {
   display: flex;
   align-items: center;
