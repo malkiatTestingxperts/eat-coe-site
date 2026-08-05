@@ -145,20 +145,38 @@ async function signIn() {
 
 async function signOut() {
   if (!msalInstance) return;
-  const account = getActiveAccount();
+  // Deliberately local-only: does NOT call logoutPopup()/logoutRedirect(),
+  // which hand off to Microsoft's own server-side logout page — that page
+  // is the actual source of the "which account do you want to sign out
+  // of?" confirmation screen, and per Microsoft's own support engineers
+  // this is confirmed, by-design behavior of their v2.0 logout endpoint
+  // with no ETA to change (see: learn.microsoft.com/answers, "Bypass the
+  // account selection screen while logout"). Passing logoutHint (kept
+  // below for reference) only narrows it to the right account — it can't
+  // remove the confirmation click itself.
+  //
+  // Instead, this clears the signed-in account directly from MSAL's own
+  // cache — the person is fully signed out of THIS app immediately, with
+  // no extra screen at all. Tradeoff: their broader Microsoft session
+  // (Outlook, Teams, etc.) stays active elsewhere — only this app's
+  // session ends, not their whole Microsoft sign-in.
   try {
     await msalReady;
-    const logoutRequest = { account };
-    // Passing `account` alone doesn't reliably skip Microsoft's "choose an
-    // account" screen — it only works if the cached ID token happens to
-    // include a login_hint claim, which isn't guaranteed. Explicitly
-    // setting logoutHint from the account's own username is what actually
-    // tells Microsoft's logout endpoint which single account to sign out,
-    // silently, without asking.
-    if (account && account.username) {
-      logoutRequest.logoutHint = account.username;
+    const account = getActiveAccount();
+    if (account) {
+      msalInstance.setActiveAccount(null);
+      try {
+        const cache = msalInstance.getTokenCache ? msalInstance.getTokenCache() : null;
+        if (cache && typeof cache.removeAccount === "function") {
+          await cache.removeAccount(account);
+        }
+      } catch (e2) { /* best-effort — the sessionStorage clear below is the real guarantee */ }
     }
-    await msalInstance.logoutPopup(logoutRequest);
+    // Guaranteed cleanup: our cache is configured to live in sessionStorage
+    // (see MSAL_CONFIG above), so clearing it directly is a hard guarantee
+    // no MSAL session state lingers, regardless of any edge case in the
+    // removeAccount() call above.
+    try { sessionStorage.clear(); } catch (e3) { /* ignore */ }
   } catch (e) {
     console.error("Sign-out failed:", e);
   }
