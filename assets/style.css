@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TREAT COE — theme ported from the Enterprise Knowledge Portal reference
+   EAT COE — theme ported from the Enterprise Knowledge Portal reference
    Palette: dark teal-green shell + bright cyan accent
    ========================================================================== */
 
@@ -22,7 +22,6 @@
   --ink: #16262b;
   --text-mute: #5B6B76;
   --border: #e3e8ea;
-  --white: #FFFFFF;
   --radius: 14px;
   --font-body: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
@@ -1830,6 +1829,16 @@ body.role-contributor .viewer-only {
   font-size: 11.5px;
   color: var(--text-mute);
   margin-top: 3px
+}
+
+.story-link {
+  color: var(--teal-dark, #0E8A96);
+  font-weight: 600;
+  text-decoration: none
+}
+
+.story-link:hover {
+  text-decoration: underline
 }
 
 .doc-row .dr-tags {

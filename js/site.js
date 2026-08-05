@@ -1632,7 +1632,7 @@ function runHeroSearch() {
 function renderResultCard(item) {
   const isStory = item.type === "story";
   const title = isStory ? item.title : item.name;
-  const meta = isStory ? `${escapeHtml(item.pillar)} · Owner: ${escapeHtml(item.owner)}` : `${escapeHtml(item.pillar || "Unlinked")} · ${escapeHtml(item.location || "SharePoint")}`;
+  const meta = isStory ? `${escapeHtml(item.pillar)} · Owner: ${escapeHtml(item.owner)}` : `${escapeHtml(item.pillar || "Unlinked")} · ${escapeHtml(item.location || "SharePoint")}${storyLinkHtml(item)}`;
   const desc = isStory ? item.description : `Tags: ${(item.tags || []).join(", ") || "—"}`;
   const link = isStory ? item.url : "#";
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
@@ -1776,12 +1776,25 @@ function renderDocumentsPage() {
   draw();
 }
 
+/**
+ * If a document belongs to a tracked story (via storyCode), returns a
+ * small clickable link to that story's page — lets someone go straight
+ * from a document to the deliverable it's part of, not just the file
+ * itself. Returns "" if the document isn't linked to any story.
+ */
+function storyLinkHtml(doc) {
+  if (!doc.storyCode) return "";
+  const story = STORIES.find(s => s.code === doc.storyCode);
+  if (!story) return "";
+  return ` · <a class="story-link" href="${story.url}">📁 ${escapeHtml(story.code)} ${escapeHtml(story.title)}</a>`;
+}
+
 function docRowHtml(d) {
   const canManage = d.sourceType === "user";
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1795,7 +1808,7 @@ function docRowHtml(d) {
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
-        <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
+        <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens${storyLinkHtml(d)}</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
         ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
