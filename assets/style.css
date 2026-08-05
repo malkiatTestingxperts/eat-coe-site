@@ -1636,25 +1636,38 @@ body.login-page {
   padding: 6px 12px
 }
 
+/* Role Badge */
 .role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .5px;
-  border-radius: 20px;
-  padding: 5px 10px;
-  white-space: nowrap
+  letter-spacing: .6px;
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
 }
 
 .role-badge-moderator {
-  color: #1b2a38;
   background: #FFB627;
+  color: #1b2a38;
+  border: 1px solid #FFB627;
 }
 
 .role-badge-viewer {
-  color: #dbe6e8;
   background: rgba(255, 255, 255, .08);
-  border: 1px solid rgba(255, 255, 255, .18)
+  color: #dbe6e8;
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+
+.role-badge-viewer:hover {
+  background: rgba(255, 255, 255, .12);
 }
 
 .signout-btn {
