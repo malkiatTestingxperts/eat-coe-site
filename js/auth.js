@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -183,13 +183,52 @@ async function signOut() {
   onSignedOut();
 }
 
+// ---- Group-based role assignment ----
+// Fill these in with your two Entra ID security groups' real Object IDs —
+// find each one under Entra ID → Groups → (click the group) → Object Id.
+// Until both are filled in, everyone defaults to Viewer (the safer option),
+// so this can be deployed before the group IDs are known without
+// accidentally granting Moderator access to everyone.
+const MODERATOR_GROUP_ID = "PASTE-MODERATOR-GROUP-OBJECT-ID-HERE";
+const VIEWER_GROUP_ID = "PASTE-VIEWER-GROUP-OBJECT-ID-HERE";
+
+/**
+ * Reads real group membership from the signed-in account's ID token. This
+ * requires a one-time Entra ID configuration step (not code): the app
+ * registration's Token configuration needs a "groups" optional claim added
+ * to the ID token (Entra ID → App registrations → this app → Token
+ * configuration → Add groups claim → check ID → Security groups). Once
+ * that's done, group Object IDs the signed-in user belongs to show up
+ * automatically in account.idTokenClaims.groups — no extra Graph
+ * permission or API call needed for this specific check.
+ *
+ * Note: if someone belongs to more than ~200 groups, Azure AD omits this
+ * claim entirely (a documented "groups overage" case) — uncommon for an
+ * individual user, but if it ever comes up, this quietly falls back to
+ * Viewer rather than breaking.
+ */
+function determineRoleFromGroups(account) {
+  const groups = (account && account.idTokenClaims && account.idTokenClaims.groups) || [];
+  const moderatorConfigured = MODERATOR_GROUP_ID.indexOf("PASTE-") !== 0;
+  const viewerConfigured = VIEWER_GROUP_ID.indexOf("PASTE-") !== 0;
+
+  if (moderatorConfigured && groups.includes(MODERATOR_GROUP_ID)) {
+    return "contributor"; // internal role name kept as-is — reuses all existing .contributor-only gating
+  }
+  if (viewerConfigured && groups.includes(VIEWER_GROUP_ID)) {
+    return "viewer";
+  }
+  // Default to the safer option: someone not recognized in either group
+  // (or the groups claim isn't configured yet) sees view-only access, not
+  // edit access, by default.
+  return "viewer";
+}
+
 function onSignedIn(account) {
   const displayName = account.name || account.username || "Signed-in user";
   if (typeof setUserName === "function") setUserName(displayName);
-  // No manual role switcher anymore: a real, signed-in identity is treated as
-  // Contributor. Once real SharePoint-group enforcement is added later, this
-  // is the spot to check actual group membership instead of granting it outright.
-  if (typeof setRole === "function") setRole("contributor");
+  const role = determineRoleFromGroups(account);
+  if (typeof setRole === "function") setRole(role);
   document.body.classList.remove("signin-required");
   renderAuthUI();
 
@@ -222,8 +261,12 @@ function renderAuthUI() {
 
   const account = getActiveAccount();
   if (account) {
+    const role = (typeof getRole === "function") ? getRole() : "viewer";
+    const roleLabel = role === "contributor" ? "Moderator" : "Viewer";
+    const roleClass = role === "contributor" ? "role-badge-moderator" : "role-badge-viewer";
     box.innerHTML = `
       <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
+      <span class="role-badge ${roleClass}">${roleLabel}</span>
       <button class="signout-btn" onclick="signOut()">Log Out</button>`;
   } else {
     box.innerHTML = `

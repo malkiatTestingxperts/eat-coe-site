@@ -1794,7 +1794,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1810,7 +1810,7 @@ function docRowHtml(d) {
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens${storyLinkHtml(d)}</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">“${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -2015,7 +2015,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">“${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });

@@ -1636,6 +1636,27 @@ body.login-page {
   padding: 6px 12px
 }
 
+.role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-radius: 20px;
+  padding: 5px 10px;
+  white-space: nowrap
+}
+
+.role-badge-moderator {
+  color: #1b2a38;
+  background: #FFB627;
+}
+
+.role-badge-viewer {
+  color: #dbe6e8;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .18)
+}
+
 .signout-btn {
   background: none;
   border: 1px solid rgba(255, 255, 255, .25);
