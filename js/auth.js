@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -30,7 +30,7 @@ const MSAL_CONFIG = {
     postLogoutRedirectUri: REGISTERED_REDIRECT_URI
   },
   cache: {
-    cacheLocation: "localStorage",
+    cacheLocation: "sessionStorage",
     storeAuthStateInCookie: false
   }
 };
@@ -120,6 +120,12 @@ async function signIn() {
         "\n\nThis usually means the app needs admin consent for the requested " +
         "permissions. Ask your Entra ID admin to grant admin consent in " +
         "Entra ID → App registrations → this app → API permissions.";
+    } else if (errorCode.indexOf("50105") !== -1 || /not assigned/i.test(errorMessage)) {
+      hint =
+        "\n\nThis is expected, not a bug: this app now requires being explicitly " +
+        "assigned access (Assignment Required is on in Entra ID). This account " +
+        "hasn't been added to the approved group yet — ask your Entra ID admin " +
+        "to add it under Enterprise Applications → this app → Users and groups.";
     } else if (/uninitialized_public_client_application/i.test(errorCode) || /initialize/i.test(errorMessage)) {
       hint =
         "\n\nThis means MSAL's own startup step failed silently earlier — " +
@@ -142,7 +148,17 @@ async function signOut() {
   const account = getActiveAccount();
   try {
     await msalReady;
-    await msalInstance.logoutPopup({ account });
+    const logoutRequest = { account };
+    // Passing `account` alone doesn't reliably skip Microsoft's "choose an
+    // account" screen — it only works if the cached ID token happens to
+    // include a login_hint claim, which isn't guaranteed. Explicitly
+    // setting logoutHint from the account's own username is what actually
+    // tells Microsoft's logout endpoint which single account to sign out,
+    // silently, without asking.
+    if (account && account.username) {
+      logoutRequest.logoutHint = account.username;
+    }
+    await msalInstance.logoutPopup(logoutRequest);
   } catch (e) {
     console.error("Sign-out failed:", e);
   }
@@ -222,7 +238,73 @@ function isMsalPopup() {
   }
 }
 
+/**
+ * Inactivity-based auto sign-out — separate from (and in addition to) the
+ * sessionStorage cache change above. sessionStorage already handles "the
+ * browser was closed"; this handles the other real scenario: a browser
+ * tab left open and unattended for a long time without being closed. After
+ * SESSION_INACTIVITY_TIMEOUT_MS with no clicks/keystrokes/scrolling, the
+ * person is signed out automatically, same as clicking Log Out themselves.
+ */
+const SESSION_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const LAST_ACTIVITY_KEY = "eatcoe_last_activity_ts";
+const SIGNED_OUT_REASON_KEY = "eatcoe_signed_out_reason";
+
+function recordActivity() {
+  try { sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch (e) { /* ignore */ }
+}
+
+function getLastActivity() {
+  try {
+    const v = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+    return v ? parseInt(v, 10) : Date.now();
+  } catch (e) {
+    return Date.now();
+  }
+}
+
+async function checkSessionTimeout() {
+  if (!SSO_ENABLED || !msalInstance) return;
+  const account = getActiveAccount();
+  if (!account) return; // nothing to time out
+  const idleMs = Date.now() - getLastActivity();
+  if (idleMs >= SESSION_INACTIVITY_TIMEOUT_MS) {
+    console.warn("Signing out automatically after " + Math.round(idleMs / 60000) + " minute(s) of inactivity.");
+    try { sessionStorage.setItem(SIGNED_OUT_REASON_KEY, "inactivity"); } catch (e) { /* ignore */ }
+    await signOut();
+    window.location.href = "login.html";
+  }
+}
+
+function initInactivityTracking() {
+  recordActivity();
+  ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((evt) => {
+    let throttled = false;
+    document.addEventListener(evt, () => {
+      if (throttled) return;
+      throttled = true;
+      setTimeout(() => { throttled = false; }, 5000); // at most once every 5s per event type
+      recordActivity();
+    }, { passive: true });
+  });
+  setInterval(checkSessionTimeout, 60 * 1000); // check once a minute
+}
+
+function showSessionMessageIfNeeded() {
+  const el = document.getElementById("sessionMessage");
+  if (!el) return;
+  let reason = null;
+  try {
+    reason = sessionStorage.getItem(SIGNED_OUT_REASON_KEY);
+    sessionStorage.removeItem(SIGNED_OUT_REASON_KEY);
+  } catch (e) { /* ignore */ }
+  if (reason === "inactivity") {
+    el.innerHTML = '<p class="session-timeout-note">You were signed out after being inactive for a while. Please log in again.</p>';
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  showSessionMessageIfNeeded();
   if (isMsalPopup()) return;
 
   if (!SSO_ENABLED) {
@@ -238,6 +320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const account = getActiveAccount();
   if (account) {
     onSignedIn(account);
+    initInactivityTracking();
     // Already signed in but landed on the login page anyway (e.g. via a
     // bookmark) — no need to show it, go straight to Home.
     if (isLoginPage()) {

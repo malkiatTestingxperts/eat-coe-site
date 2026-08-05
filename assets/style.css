@@ -1,5 +1,5 @@
 /* ==========================================================================
-   EAT COE — theme ported from the Enterprise Knowledge Portal reference
+   TREAT COE — theme ported from the Enterprise Knowledge Portal reference
    Palette: dark teal-green shell + bright cyan accent
    ========================================================================== */
 
@@ -1175,12 +1175,11 @@ body.login-page {
 }
 
 .login-card {
-  background: var(--white);
+  background: var(--dark-bg-alt);
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 18px;
   padding: 48px 46px;
   text-align: center;
-  margin-top: -10px;
   max-width: 440px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
 }
@@ -1219,6 +1218,17 @@ body.login-page {
 .login-note {
   margin-top: 18px;
   text-align: center;
+}
+
+.session-timeout-note {
+  background: rgba(255, 185, 0, 0.12);
+  border: 1px solid rgba(255, 185, 0, 0.4);
+  color: #B8860B;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  text-align: center;
+  margin: 0 0 16px;
 }
 
 .hero .eyebrow {

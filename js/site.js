@@ -1555,7 +1555,8 @@ function getAllKnownTags() {
 function selectTagFromSuggestion(tag) {
   const input = document.getElementById("searchInput");
   if (!input) return;
-  input.value = tag;
+  input.value = "#" + tag;
+  input.dataset.confirmedTag = tag; // marks this exact value as "selected", not "still typing"
   runHeroSearch();
   input.focus();
 }
@@ -1590,7 +1591,19 @@ function runHeroSearch() {
   if (!box || !input) return;
   const q = input.value.trim();
 
-  if (q.startsWith("#")) {
+  // Once a tag has been picked from the suggestion list, the box shows
+  // "#tagname" (kept visible on purpose) — but that's now a CONFIRMED
+  // search, not someone still browsing tags, so it must not re-trigger the
+  // suggestion list just because it starts with "#". Any further editing
+  // (the value no longer matching exactly) clears this and goes back to
+  // normal behavior.
+  const confirmedTag = input.dataset.confirmedTag;
+  const isConfirmedTagSearch = confirmedTag && q === "#" + confirmedTag;
+  if (confirmedTag && !isConfirmedTagSearch) {
+    delete input.dataset.confirmedTag;
+  }
+
+  if (q.startsWith("#") && !isConfirmedTagSearch) {
     // Tag-browsing mode: show all known tags (filtered by whatever comes
     // after the #, if anything) as clickable suggestions, rather than
     // running a normal search — lets people discover available tags
@@ -1606,7 +1619,8 @@ function runHeroSearch() {
     return;
   }
 
-  const list = searchAll(q, { pillar: activePillar });
+  const searchTerm = isConfirmedTagSearch ? confirmedTag : q;
+  const list = searchAll(searchTerm, { pillar: activePillar });
   box.classList.add("show");
   if (list.length === 0) {
     box.innerHTML = `<div class="results-empty">No results. Try a different pillar or keyword.</div>`;
@@ -1717,7 +1731,8 @@ function pickOnePerPillar(docs, count) {
 function selectTagForDocSearch(tag) {
   const input = document.getElementById("docSearch");
   if (!input) return;
-  input.value = tag;
+  input.value = "#" + tag;
+  input.dataset.confirmedTag = tag;
   input.dispatchEvent(new Event("input"));
   input.focus();
 }
@@ -1736,7 +1751,13 @@ function renderDocumentsPage() {
     }
     const q = searchBox ? searchBox.value.trim() : "";
 
-    if (q.startsWith("#")) {
+    const confirmedTag = searchBox ? searchBox.dataset.confirmedTag : null;
+    const isConfirmedTagSearch = confirmedTag && q === "#" + confirmedTag;
+    if (searchBox && confirmedTag && !isConfirmedTagSearch) {
+      delete searchBox.dataset.confirmedTag;
+    }
+
+    if (q.startsWith("#") && !isConfirmedTagSearch) {
       // Same # tag-browsing behavior as the Home page search — click a
       // suggested tag to search by it.
       root.innerHTML = renderTagSuggestionsHtml(q, "selectTagForDocSearch");
@@ -1744,7 +1765,8 @@ function renderDocumentsPage() {
     }
 
     const pillar = pillarSelect ? pillarSelect.value : "All";
-    let list = q ? searchAll(q, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
+    const searchTerm = isConfirmedTagSearch ? confirmedTag : q;
+    let list = searchTerm ? searchAll(searchTerm, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
     list.sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || ""));
     root.innerHTML = list.length ? list.map(d => docRowHtml(d)).join("") : `<div class="results-empty">No documents match.</div>`;
   }
@@ -1775,7 +1797,7 @@ function docRowHtml(d) {
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -1980,7 +2002,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px"> “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });
