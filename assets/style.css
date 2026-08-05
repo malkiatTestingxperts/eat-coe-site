@@ -1615,7 +1615,7 @@ body.login-page {
 
 #authBox:has(.role-badge) .role-badge {
   grid-area: badge;
-  justify-self: start;
+  justify-self: stretch;
 }
 
 #authBox:has(.role-badge) .signed-in-name {
@@ -1625,7 +1625,7 @@ body.login-page {
 
 #authBox:has(.role-badge) .signout-btn {
   grid-area: logout;
-  align-self: center;
+  align-self: self-end;
 }
 
 .signin-btn {
@@ -1683,6 +1683,8 @@ body.login-page {
   white-space: nowrap;
   line-height: 1;
   user-select: none;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .role-badge-moderator {
