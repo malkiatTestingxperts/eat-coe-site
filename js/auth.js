@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -189,8 +189,8 @@ async function signOut() {
 // Until both are filled in, everyone defaults to Viewer (the safer option),
 // so this can be deployed before the group IDs are known without
 // accidentally granting Moderator access to everyone.
-const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9";
-const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98";
+const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // EAT-COE-Site Portal Moderators
+const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98"; // EAT-COE-Site Portal Viewers
 
 /**
  * Reads real group membership from the signed-in account's ID token. This
@@ -208,9 +208,42 @@ const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98";
  * Viewer rather than breaking.
  */
 function determineRoleFromGroups(account) {
-  const groups = (account && account.idTokenClaims && account.idTokenClaims.groups) || [];
+  const claims = account && account.idTokenClaims;
+  const groups = (claims && claims.groups) || [];
   const moderatorConfigured = MODERATOR_GROUP_ID.indexOf("PASTE-") !== 0;
   const viewerConfigured = VIEWER_GROUP_ID.indexOf("PASTE-") !== 0;
+
+  // Diagnostic: if the groups claim is missing/empty, or present but
+  // doesn't contain a recognized group, log exactly why — this is the one
+  // piece of information that actually distinguishes the real causes
+  // (groups claim not configured on the app, groups "overage" for someone
+  // in 200+ groups, or just a stale cached sign-in from before being added
+  // to the group) instead of guessing.
+  if (!claims || !claims.groups) {
+    if (claims && claims._claim_names && claims._claim_names.groups) {
+      console.warn(
+        "This account belongs to too many groups (200+) for Azure AD to list them directly in the sign-in token " +
+        "(a documented \"groups overage\" case) — role detection can't work this way for this account. " +
+        "A different approach (an explicit Graph call, or app-role assignment instead of a groups claim) would be " +
+        "needed for this specific account."
+      );
+    } else {
+      console.warn(
+        "No 'groups' claim found on the ID token at all — role will default to Viewer regardless of real group " +
+        "membership. Most likely cause: the ID token's groups claim isn't configured yet in Entra ID " +
+        "(App registrations → this app → Token configuration → Add groups claim → check ID → Security groups), " +
+        "or this session was signed in before that was configured — sign out and back in after confirming that " +
+        "setting to get a fresh token."
+      );
+    }
+  } else if (moderatorConfigured && !groups.includes(MODERATOR_GROUP_ID) && !groups.includes(VIEWER_GROUP_ID)) {
+    console.warn(
+      "This account's ID token has a groups claim, but it doesn't include the configured Moderator or Viewer " +
+      "group IDs. Groups on the token: " + JSON.stringify(groups) + ". If this account was just added to a " +
+      "group, this is most likely a stale cached sign-in — sign out and back in to get a fresh token with " +
+      "current group membership."
+    );
+  }
 
   if (moderatorConfigured && groups.includes(MODERATOR_GROUP_ID)) {
     return "contributor"; // internal role name kept as-is — reuses all existing .contributor-only gating
@@ -222,6 +255,25 @@ function determineRoleFromGroups(account) {
   // (or the groups claim isn't configured yet) sees view-only access, not
   // edit access, by default.
   return "viewer";
+}
+
+/**
+ * Console-callable diagnostic: run debugMyGroups() in the browser console
+ * while signed in to see exactly what group info (if any) is actually on
+ * your current sign-in token, and which role that resolves to.
+ */
+function debugMyGroups() {
+  const account = getActiveAccount();
+  if (!account) {
+    console.log("Not signed in.");
+    return;
+  }
+  const claims = account.idTokenClaims || {};
+  console.log("Groups on this token:", claims.groups || "(none present)");
+  console.log("Groups overage indicator present:", !!(claims._claim_names && claims._claim_names.groups));
+  console.log("Configured Moderator group ID:", MODERATOR_GROUP_ID);
+  console.log("Configured Viewer group ID:", VIEWER_GROUP_ID);
+  console.log("Role this resolves to:", determineRoleFromGroups(account));
 }
 
 function onSignedIn(account) {
