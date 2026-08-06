@@ -1221,17 +1221,6 @@ body.login-page {
   text-align: center;
 }
 
-.session-timeout-note {
-  background: rgba(255, 185, 0, 0.12);
-  border: 1px solid rgba(255, 185, 0, 0.4);
-  color: #B8860B;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
-  text-align: center;
-  margin: 0 0 16px;
-}
-
 .hero .eyebrow {
   color: var(--teal);
   opacity: .9
@@ -1597,35 +1586,41 @@ body.login-page {
   gap: 8px
 }
 
-/* When signed in (badge + name + logout are present), rearrange into two
-   rows — role badge on top, username underneath — with Logout aligned
-   beside both. Falls back to the plain row above in any browser without
+/* When signed in (badge + name + logout are present), present the role +
+   name as one unified card instead of two separate floating pills — reads
+   as a single "who am I, signed in as what" unit, with Logout set apart
+   to its right. Falls back to the plain row above in any browser without
    :has() support, so it degrades safely rather than breaking. */
 #authBox:has(.role-badge) {
-  display: grid;
-  grid-template-columns: auto auto;
-  grid-template-rows: auto auto;
-  grid-template-areas:
-    "badge  logout"
-    "name   logout";
+  display: flex;
   align-items: center;
-  column-gap: 12px;
-  row-gap: 4px;
+  gap: 12px
+}
+
+#authBox:has(.role-badge) .identity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  padding: 7px 14px;
 }
 
 #authBox:has(.role-badge) .role-badge {
-  grid-area: badge;
-  justify-self: stretch;
+  height: 20px;
+  min-width: 0;
+  padding: 0 9px;
+  font-size: 9.5px;
+  letter-spacing: .5px;
 }
 
 #authBox:has(.role-badge) .signed-in-name {
-  grid-area: name;
-  justify-self: start;
-}
-
-#authBox:has(.role-badge) .signout-btn {
-  grid-area: logout;
-  align-self: self-end;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
 }
 
 .signin-btn {
@@ -1683,8 +1678,6 @@ body.login-page {
   white-space: nowrap;
   line-height: 1;
   user-select: none;
-  text-align: center;
-  margin: 0 auto;
 }
 
 .role-badge-moderator {
@@ -1704,13 +1697,12 @@ body.login-page {
 }
 
 .signout-btn {
-  background: rgba(41, 197, 214, .14);
-  border: 1px solid rgba(41, 197, 214, .3);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, .25);
   color: #dbe6e8;
   border-radius: 7px;
   padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11.5px;
   cursor: pointer
 }
 
@@ -2642,5 +2634,75 @@ body.role-contributor .viewer-only {
 @keyframes doc-loading-spin {
   to {
     transform: rotate(360deg)
+  }
+}
+
+/* ---------------- toast notifications (replaces native alert()) ---------------- */
+#toastContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 360px
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #1B2A38;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+  border-left: 4px solid var(--teal, #29c5d6);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity .2s ease, transform .2s ease;
+  font-size: 13.5px;
+  line-height: 1.4
+}
+
+.toast-show {
+  opacity: 1;
+  transform: translateY(0)
+}
+
+.toast-error {
+  border-left-color: #E63950
+}
+
+.toast-success {
+  border-left-color: #29c5d6
+}
+
+.toast-msg {
+  flex: 1;
+  white-space: pre-line
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, .6);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px
+}
+
+.toast-close:hover {
+  color: #fff
+}
+
+@media (max-width:600px) {
+  #toastContainer {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none
   }
 }

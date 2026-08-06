@@ -1,5 +1,5 @@
 /* ==========================================================================
-   EAT COE — Microsoft SSO sign-in (MSAL.js)
+   TREAT COE — Microsoft SSO sign-in (MSAL.js)
    Sign-in ONLY. No Graph document/permission calls happen here — this just
    proves who the visitor is (their real Microsoft work identity) and feeds
    their real display name into the rest of the site (activity log, tags,
@@ -269,8 +269,10 @@ function renderAuthUI() {
     const roleLabel = role === "contributor" ? "Moderator" : "Viewer";
     const roleClass = role === "contributor" ? "role-badge-moderator" : "role-badge-viewer";
     box.innerHTML = `
-      <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
-      <span class="role-badge ${roleClass}">${roleLabel}</span>
+      <div class="identity-card">
+        <span class="role-badge ${roleClass}">${roleLabel}</span>
+        <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
+      </div>
       <button class="signout-btn" onclick="signOut()">Log Out</button>`;
   } else {
     box.innerHTML = `
