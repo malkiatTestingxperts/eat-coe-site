@@ -12,6 +12,48 @@
 
 const SHAREPOINT_FOLDER_URL = "https://txplin.sharepoint.com/sites/EnterpriseApplicationTesting-EAT/Shared Documents";
 
+/**
+ * Lightweight, non-blocking notification — replaces every native alert()
+ * on the site. Unlike alert(), this never pauses/blocks the page, never
+ * needs to be manually dismissed to continue, and disappears on its own.
+ * type: "info" | "success" | "error"
+ * durationMs: 0 means it stays until manually closed (used for things
+ * someone genuinely needs to read and act on, like a real error).
+ */
+function showToast(message, type, durationMs) {
+  type = type || "info";
+  durationMs = durationMs === undefined ? 6000 : durationMs;
+
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.className = "toast toast-" + type;
+  const msgEl = document.createElement("span");
+  msgEl.className = "toast-msg";
+  msgEl.textContent = message; // textContent, not innerHTML — never renders as HTML
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "toast-close";
+  closeBtn.setAttribute("aria-label", "Dismiss");
+  closeBtn.textContent = "\u00d7";
+  toast.appendChild(msgEl);
+  toast.appendChild(closeBtn);
+  container.appendChild(toast);
+
+  const remove = () => {
+    toast.classList.remove("toast-show");
+    setTimeout(() => toast.remove(), 200);
+  };
+  closeBtn.addEventListener("click", remove);
+  if (durationMs > 0) setTimeout(remove, durationMs);
+  requestAnimationFrame(() => toast.classList.add("toast-show"));
+  return remove;
+}
+
 const STORIES = [
   {
     "code": "1.1",
@@ -889,10 +931,46 @@ const DOC_NAME_OVERRIDES_KEY = "eatcoe_doc_name_overrides";
 function normalizeDocName(name) { return (name || "").trim().toLowerCase(); }
 function getDocNameOverrides() { return lsGet(DOC_NAME_OVERRIDES_KEY, {}); }
 function saveDocNameOverrides(obj) { lsSet(DOC_NAME_OVERRIDES_KEY, obj); }
-function getDocNameOverride(name) { return getDocNameOverrides()[normalizeDocName(name)] || null; }
-function setDocTagsOverride(name, tags) {
-  const overrides = getDocNameOverrides();
+
+// Shared, cross-user tags loaded from SharePoint (see fetchSharedTagsFile
+// in js/graph.js) — this is what makes a tag someone else added actually
+// visible to you. null = not loaded yet; {} once loaded (possibly empty).
+let SHARED_TAGS = null;
+
+async function loadSharedTags() {
+  if (typeof fetchSharedTagsFile !== "function") return;
+  try {
+    SHARED_TAGS = await fetchSharedTagsFile();
+  } catch (e) {
+    console.warn("Could not load shared tags from SharePoint — showing locally-saved tags only for now.", e);
+    SHARED_TAGS = SHARED_TAGS || {};
+  }
+  refreshDocViews();
+}
+
+function getDocNameOverride(name) {
   const key = normalizeDocName(name);
+  const local = getDocNameOverrides()[key];
+  const shared = SHARED_TAGS ? SHARED_TAGS[key] : null;
+  if (!local && !shared) return null;
+  // Shared tags are the real, team-wide source of truth; local tags act as
+  // an optimistic overlay — e.g. a tag just added that hasn't finished
+  // syncing yet, or one saved while shared write access wasn't available.
+  const tags = Array.from(new Set([...(shared && shared.tags ? shared.tags : []), ...(local && local.tags ? local.tags : [])]));
+  return { tags };
+}
+
+/**
+ * Saves a tag change. Always saves locally first (so the UI updates
+ * immediately regardless of network/permission state), then tries to sync
+ * it to the shared SharePoint file so everyone else can see it too.
+ * Returns { synced: true } if the shared save succeeded, or
+ * { synced: false, error } if it's only saved locally on this device for
+ * now (e.g. shared write access hasn't been granted by an admin yet).
+ */
+async function setDocTagsOverride(name, tags) {
+  const key = normalizeDocName(name);
+  const overrides = getDocNameOverrides();
   // Deliberately does NOT stamp lastModifiedBy/lastModifiedDate — adding a
   // tag is a local annotation, not a real change to the document itself,
   // so it shouldn't look like the file was "modified," and critically,
@@ -900,6 +978,16 @@ function setDocTagsOverride(name, tags) {
   // what was causing rows to jump to the top the moment a tag was added.
   overrides[key] = { ...(overrides[key] || {}), tags };
   saveDocNameOverrides(overrides);
+
+  if (typeof saveSharedTag !== "function") return { synced: false };
+  try {
+    await saveSharedTag(key, tags);
+    if (SHARED_TAGS) SHARED_TAGS[key] = { tags };
+    return { synced: true };
+  } catch (e) {
+    console.warn("Could not save this tag to the shared SharePoint file — it's saved locally on this device for now. Ask your admin to grant Sites.ReadWrite.All if this keeps happening.", e);
+    return { synced: false, error: e };
+  }
 }
 function getDownloadCounts() { return lsGet(LS.downloads, {}); }
 function bumpDownload(docId) {
@@ -1226,11 +1314,11 @@ function initRegisterForm() {
   if (sendBtn) {
     sendBtn.addEventListener("click", async () => {
       if (!docNameInput.value.trim() && !fileInput.files.length) {
-        alert("Please enter a document name or attach a file before sending.");
+        showToast("Please enter a document name or attach a file before sending.", "error");
         return;
       }
       if (typeof sendDocumentEmail !== "function") {
-        alert("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.");
+        showToast("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.", "error");
         return;
       }
       syncTagsAndPendingPreview();
@@ -1252,16 +1340,16 @@ function initRegisterForm() {
         form.reset();
         fileNameLabel.textContent = "";
         if (attachmentSkipped) {
-          alert("Sent — but the attached file was too large to include automatically (over 3MB) and was left out. Please share it separately.");
+          showToast("Sent — but the attached file was too large to include automatically (over 3MB) and was left out. Please share it separately.", "success", 0);
         } else {
-          alert("Sent — your document submission was emailed to " + COE_INTAKE_EMAIL + (file ? " with the file attached." : "."));
+          showToast("Sent — your document submission was emailed to " + COE_INTAKE_EMAIL + (file ? " with the file attached." : "."), "success");
         }
       } catch (e) {
         console.error("Sending the document submission email failed:", e);
-        alert(
+        showToast(
           "Couldn't send automatically: " + (e && e.message ? e.message : e) +
-          "\n\nThis usually means Microsoft sign-in hasn't granted mail-sending permission yet — " +
-          "try signing out and back in, or check with your admin if this keeps happening."
+          " This usually means Microsoft sign-in hasn't granted mail-sending permission yet — try signing out and back in, or check with your admin if this keeps happening.",
+          "error", 0
         );
       } finally {
         sendBtn.disabled = false;
@@ -1275,21 +1363,23 @@ function deleteUserDocument(id) {
   saveUserDocs(getUserDocs().filter(d => d.id !== id));
 }
 
-function updateDocTags(doc, newTags) {
+async function updateDocTags(doc, newTags) {
   if (doc.sourceType === "user") {
     // Locally-registered placeholder entries are simple, directly-owned
     // objects — just mutate them in place.
     const today = new Date().toISOString().slice(0, 10);
     const docs = getUserDocs().map(d => d.id === doc.id ? { ...d, tags: newTags, lastModifiedBy: getUserName(), lastModifiedDate: today } : d);
     saveUserDocs(docs);
-  } else {
-    // Seed placeholders AND real Graph-sourced documents both go through
-    // the unified name-based override store — this is what actually makes
-    // "Add tag" work on real documents, which previously fell through to
-    // an id-based lookup that could never match them.
-    setDocTagsOverride(doc.name, newTags);
+    logActivity("tag", doc.name);
+    return { synced: false }; // locally-registered docs were never shared to begin with
   }
+  // Seed placeholders AND real Graph-sourced documents both go through
+  // the unified name-based override store — this is what actually makes
+  // "Add tag" work on real documents, which previously fell through to
+  // an id-based lookup that could never match them.
+  const result = await setDocTagsOverride(doc.name, newTags);
   logActivity("tag", doc.name);
+  return result;
 }
 
 /**
@@ -1491,6 +1581,7 @@ function searchAll(query, { pillar = "All", typeFilter = "All" } = {}) {
 
 document.addEventListener("DOMContentLoaded", () => {
   loadStoredTags(); // fire-and-forget — fast, same-origin fetch; ready well before anyone types "#"
+  loadSharedTags(); // fire-and-forget — cross-user tags from SharePoint, merges in once loaded
   ensureSeedActivity();
   initRoleSwitcher();
   initNavDropdowns();
@@ -1794,7 +1885,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -1828,27 +1919,31 @@ function renderTagPills(d) {
 
 function findDocById(id) { return getAllDocuments().find(d => d.id === id); }
 
-function handleAddTag(id) {
+async function handleAddTag(id) {
   const input = document.getElementById("newtag-" + id);
   const val = input.value.trim();
   if (!val) return;
   const doc = findDocById(id);
   if (!doc) return;
   const tags = Array.from(new Set([...(doc.tags || []), val]));
-  updateDocTags(doc, tags);
   input.value = "";
   refreshDocViews();
+  const result = await updateDocTags(doc, tags);
+  refreshDocViews();
+  if (result && result.synced === false && result.error) {
+    console.warn('Tag "' + val + '" saved locally only — not yet visible to teammates. Ask your admin to grant Sites.ReadWrite.All for shared tags to sync across the team.');
+  }
 }
 function handleRemoveTag(id, tag) {
   const doc = findDocById(id);
   if (!doc) return;
-  updateDocTags(doc, (doc.tags || []).filter(t => t !== tag));
+  updateDocTags(doc, (doc.tags || []).filter(t => t !== tag)).then(() => refreshDocViews());
   refreshDocViews();
 }
 function handleDeleteDoc(id) {
-  if (!confirm("Remove this document entry? (This only removes the catalog entry from your browser — nothing is deleted in SharePoint.)")) return;
   deleteUserDocument(id);
   refreshDocViews();
+  showToast("Removed from your local catalog. Nothing was deleted in SharePoint.", "success");
 }
 function refreshDocViews() {
   // Background events (like full-text indexing finishing one file at a
@@ -2015,7 +2110,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px">“${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });

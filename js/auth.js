@@ -65,13 +65,12 @@ function getActiveAccount() {
 
 async function signIn() {
   if (!SSO_ENABLED) {
-    alert(
-      "Log in isn't wired up yet.\n\n" +
-      "Your Entra ID admin needs to register this site (Single-page application) " +
-      "and give you a Client ID + Tenant ID. Paste those into js/auth.js — see the " +
-      "\"SSO login\" section in README.md for the exact steps.\n\n" +
-      "Until then, everyone browses as a read-only Viewer."
-    );
+    if (typeof showToast === "function") {
+      showToast(
+        "Log in isn't wired up yet. Your Entra ID admin needs to register this site and provide a Client ID + Tenant ID — see the \"SSO login\" section in README.md. Until then, everyone browses as a read-only Viewer.",
+        "error", 0
+      );
+    }
     return;
   }
   if (!msalInstance) return;
@@ -96,50 +95,35 @@ async function signIn() {
       window.location.href = "index.html";
     }
   } catch (e) {
-    console.error("Microsoft sign-in failed:", e);
     const errorCode = e && e.errorCode ? e.errorCode : (e && e.name) || "unknown_error";
     const errorMessage = e && e.errorMessage ? e.errorMessage : (e && e.message) || String(e);
 
+    // Someone closing or blocking the sign-in popup themselves is a normal,
+    // deliberate action, not a real error — show nothing at all, the same
+    // way the page looked before they clicked Log In.
+    if (errorCode === "popup_window_error" || errorCode === "user_cancelled") {
+      console.warn("Sign-in popup was closed or blocked before completing:", e);
+      return;
+    }
+
+    console.error("Microsoft sign-in failed:", e);
     let hint = "";
     if (errorCode.indexOf("50011") !== -1 || /redirect/i.test(errorMessage)) {
       hint =
-        "\n\nThis usually means the redirect URI this page is sending doesn't " +
-        "exactly match what's registered in Entra ID.\n\n" +
-        "This page is sending:\n  " + MSAL_CONFIG.auth.redirectUri + "\n\n" +
-        "Ask your Entra ID admin to check App registrations → this app → " +
-        "Authentication → Redirect URIs, and add that exact URL (protocol, " +
-        "host, port, and path all have to match — e.g. \"localhost\" and " +
-        "\"127.0.0.1\" are treated as different origins).";
-    } else if (errorCode === "popup_window_error" || errorCode === "user_cancelled") {
-      hint =
-        "\n\nThis usually means the sign-in popup was blocked or closed. " +
-        "Check for a popup-blocked icon in the address bar and allow popups " +
-        "for this site, then try again.";
+        " This usually means the redirect URI this page is sending doesn't exactly match what's registered in Entra ID. " +
+        "This page is sending: " + MSAL_CONFIG.auth.redirectUri + ". Ask your Entra ID admin to check App registrations → " +
+        "this app → Authentication → Redirect URIs.";
     } else if (errorCode.indexOf("65001") !== -1 || /consent/i.test(errorMessage)) {
-      hint =
-        "\n\nThis usually means the app needs admin consent for the requested " +
-        "permissions. Ask your Entra ID admin to grant admin consent in " +
-        "Entra ID → App registrations → this app → API permissions.";
+      hint = " This usually means the app needs admin consent for the requested permissions — ask your Entra ID admin to grant it under App registrations → this app → API permissions.";
     } else if (errorCode.indexOf("50105") !== -1 || /not assigned/i.test(errorMessage)) {
-      hint =
-        "\n\nThis is expected, not a bug: this app now requires being explicitly " +
-        "assigned access (Assignment Required is on in Entra ID). This account " +
-        "hasn't been added to the approved group yet — ask your Entra ID admin " +
-        "to add it under Enterprise Applications → this app → Users and groups.";
+      hint = " This is expected, not a bug: this account hasn't been assigned access yet — ask your Entra ID admin to add it under Enterprise Applications → this app → Users and groups.";
     } else if (/uninitialized_public_client_application/i.test(errorCode) || /initialize/i.test(errorMessage)) {
-      hint =
-        "\n\nThis means MSAL's own startup step failed silently earlier — " +
-        "check the browser console right after the page loads (before " +
-        "clicking Log In) for a \"MSAL initialize() failed\" message, which " +
-        "will have the real underlying cause.";
+      hint = " MSAL's own startup step failed silently earlier — check the browser console right after the page loads for a \"MSAL initialize() failed\" message.";
     }
 
-    alert(
-      "Sign-in failed.\n\n" +
-      "Error code: " + errorCode + "\n" +
-      "Details: " + errorMessage +
-      hint
-    );
+    if (typeof showToast === "function") {
+      showToast("Sign-in failed (" + errorCode + "): " + errorMessage + hint, "error", 0);
+    }
   }
 }
 
@@ -212,38 +196,6 @@ function determineRoleFromGroups(account) {
   const groups = (claims && claims.groups) || [];
   const moderatorConfigured = MODERATOR_GROUP_ID.indexOf("PASTE-") !== 0;
   const viewerConfigured = VIEWER_GROUP_ID.indexOf("PASTE-") !== 0;
-
-  // Diagnostic: if the groups claim is missing/empty, or present but
-  // doesn't contain a recognized group, log exactly why — this is the one
-  // piece of information that actually distinguishes the real causes
-  // (groups claim not configured on the app, groups "overage" for someone
-  // in 200+ groups, or just a stale cached sign-in from before being added
-  // to the group) instead of guessing.
-  if (!claims || !claims.groups) {
-    if (claims && claims._claim_names && claims._claim_names.groups) {
-      console.warn(
-        "This account belongs to too many groups (200+) for Azure AD to list them directly in the sign-in token " +
-        "(a documented \"groups overage\" case) — role detection can't work this way for this account. " +
-        "A different approach (an explicit Graph call, or app-role assignment instead of a groups claim) would be " +
-        "needed for this specific account."
-      );
-    } else {
-      console.warn(
-        "No 'groups' claim found on the ID token at all — role will default to Viewer regardless of real group " +
-        "membership. Most likely cause: the ID token's groups claim isn't configured yet in Entra ID " +
-        "(App registrations → this app → Token configuration → Add groups claim → check ID → Security groups), " +
-        "or this session was signed in before that was configured — sign out and back in after confirming that " +
-        "setting to get a fresh token."
-      );
-    }
-  } else if (moderatorConfigured && !groups.includes(MODERATOR_GROUP_ID) && !groups.includes(VIEWER_GROUP_ID)) {
-    console.warn(
-      "This account's ID token has a groups claim, but it doesn't include the configured Moderator or Viewer " +
-      "group IDs. Groups on the token: " + JSON.stringify(groups) + ". If this account was just added to a " +
-      "group, this is most likely a stale cached sign-in — sign out and back in to get a fresh token with " +
-      "current group membership."
-    );
-  }
 
   if (moderatorConfigured && groups.includes(MODERATOR_GROUP_ID)) {
     return "contributor"; // internal role name kept as-is — reuses all existing .contributor-only gating
@@ -361,7 +313,6 @@ function isMsalPopup() {
  */
 const SESSION_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const LAST_ACTIVITY_KEY = "eatcoe_last_activity_ts";
-const SIGNED_OUT_REASON_KEY = "eatcoe_signed_out_reason";
 
 function recordActivity() {
   try { sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch (e) { /* ignore */ }
@@ -382,8 +333,6 @@ async function checkSessionTimeout() {
   if (!account) return; // nothing to time out
   const idleMs = Date.now() - getLastActivity();
   if (idleMs >= SESSION_INACTIVITY_TIMEOUT_MS) {
-    console.warn("Signing out automatically after " + Math.round(idleMs / 60000) + " minute(s) of inactivity.");
-    try { sessionStorage.setItem(SIGNED_OUT_REASON_KEY, "inactivity"); } catch (e) { /* ignore */ }
     await signOut();
     window.location.href = "login.html";
   }
@@ -403,21 +352,7 @@ function initInactivityTracking() {
   setInterval(checkSessionTimeout, 60 * 1000); // check once a minute
 }
 
-function showSessionMessageIfNeeded() {
-  const el = document.getElementById("sessionMessage");
-  if (!el) return;
-  let reason = null;
-  try {
-    reason = sessionStorage.getItem(SIGNED_OUT_REASON_KEY);
-    sessionStorage.removeItem(SIGNED_OUT_REASON_KEY);
-  } catch (e) { /* ignore */ }
-  if (reason === "inactivity") {
-    el.innerHTML = '<p class="session-timeout-note">You were signed out after being inactive for a while. Please log in again.</p>';
-  }
-}
-
 document.addEventListener("DOMContentLoaded", async () => {
-  showSessionMessageIfNeeded();
   if (isMsalPopup()) return;
 
   if (!SSO_ENABLED) {
