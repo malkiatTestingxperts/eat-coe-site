@@ -1314,11 +1314,11 @@ function initRegisterForm() {
   if (sendBtn) {
     sendBtn.addEventListener("click", async () => {
       if (!docNameInput.value.trim() && !fileInput.files.length) {
-        showToast("Please enter a document name or attach a file before sending.", "error");
+        alert("Please enter a document name or attach a file before sending.");
         return;
       }
       if (typeof sendDocumentEmail !== "function") {
-        showToast("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.", "error");
+        alert("Sending isn't available yet — this needs Microsoft sign-in with mail permission. Check that you're signed in and try again.");
         return;
       }
       syncTagsAndPendingPreview();
@@ -1340,16 +1340,16 @@ function initRegisterForm() {
         form.reset();
         fileNameLabel.textContent = "";
         if (attachmentSkipped) {
-          showToast("Sent — but the attached file was too large to include automatically (over 3MB) and was left out. Please share it separately.", "success", 0);
+          alert("Sent — but the attached file was too large to include automatically (over 3MB) and was left out. Please share it separately.");
         } else {
-          showToast("Sent — your document submission was emailed to " + COE_INTAKE_EMAIL + (file ? " with the file attached." : "."), "success");
+          alert("Sent — your document submission was emailed to " + COE_INTAKE_EMAIL + (file ? " with the file attached." : "."));
         }
       } catch (e) {
         console.error("Sending the document submission email failed:", e);
-        showToast(
+        alert(
           "Couldn't send automatically: " + (e && e.message ? e.message : e) +
-          " This usually means Microsoft sign-in hasn't granted mail-sending permission yet — try signing out and back in, or check with your admin if this keeps happening.",
-          "error", 0
+          "\n\nThis usually means Microsoft sign-in hasn't granted mail-sending permission yet — " +
+          "try signing out and back in, or check with your admin if this keeps happening."
         );
       } finally {
         sendBtn.disabled = false;
@@ -1729,7 +1729,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">: “${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -1885,7 +1885,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -2110,7 +2110,7 @@ function answerFromKnowledgeBase(keyword) {
     const href = isStory ? item.url : (item.url || SHAREPOINT_FOLDER_URL);
     html += `<li>${isStory ? "📁" : "📄"} <a href="${href}" target="${isStory ? "_self" : "_blank"}">${escapeHtml(title)}</a> <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px"> “${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });
