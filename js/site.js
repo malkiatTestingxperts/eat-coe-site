@@ -1874,6 +1874,13 @@ function compareStoryCodes(a, b) {
  * trailing "Not linked to a specific story" group instead of being
  * silently dropped.
  */
+// Which story groups are currently expanded — tracked separately from the
+// DOM because renderGroupedDocuments() rebuilds the HTML from scratch on
+// every call (including background refreshes during full-text indexing),
+// which would otherwise silently reset every group back to closed right
+// after someone opens it.
+let openDocGroups = new Set();
+
 function renderGroupedDocuments(docs) {
   const groups = {};
   const unlinked = [];
@@ -1891,7 +1898,7 @@ function renderGroupedDocuments(docs) {
   }
 
   const groupHtml = (code, title, list) => `
-    <details class="doc-group">
+    <details class="doc-group" data-group-key="${escapeHtml(code || "__unlinked__")}" ${openDocGroups.has(code || "__unlinked__") ? "open" : ""}>
       <summary class="doc-group-header">
         <span class="doc-group-toggle-icon">▸</span>
         ${code ? `<span class="doc-group-code">${escapeHtml(code)}</span>` : ""}
@@ -1917,8 +1924,24 @@ function renderGroupedDocuments(docs) {
 }
 
 function setAllDocGroups(open) {
-  document.querySelectorAll("#docCatalog .doc-group").forEach(d => { d.open = open; });
+  document.querySelectorAll("#docCatalog .doc-group").forEach(d => {
+    d.open = open;
+    const key = d.dataset.groupKey;
+    if (open) openDocGroups.add(key);
+    else openDocGroups.delete(key);
+  });
 }
+
+// Event delegation: whenever any group is toggled by hand (clicking its
+// header), record that in the persistent set so the next re-render
+// respects it instead of defaulting back to closed.
+document.addEventListener("toggle", (e) => {
+  if (!e.target.classList || !e.target.classList.contains("doc-group")) return;
+  const key = e.target.dataset.groupKey;
+  if (!key) return;
+  if (e.target.open) openDocGroups.add(key);
+  else openDocGroups.delete(key);
+}, true);
 
 function renderDocumentsPage() {
   const root = document.getElementById("docCatalog");
