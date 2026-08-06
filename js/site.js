@@ -1681,7 +1681,12 @@ function selectTagFromSuggestion(tag) {
 function renderTagSuggestionsHtml(query, onSelectFnName) {
   const partial = query.slice(1).trim().toLowerCase();
   const allTags = getAllKnownTags();
-  const matches = partial ? allTags.filter(t => t.toLowerCase().includes(partial)) : allTags;
+  // "Starts with", not "contains anywhere" — typing "sf" should suggest
+  // tags that begin with sf, not "salesforce" (which merely contains "sf"
+  // in the middle). This matches how autocomplete/browsing normally works
+  // and keeps it consistent with the exact-match rule used once a tag is
+  // actually confirmed.
+  const matches = partial ? allTags.filter(t => t.toLowerCase().startsWith(partial)) : allTags;
   if (!allTags.length) {
     return `<div class="results-empty">No tags exist yet — tag a document (via Add Tag) to start building this list.</div>`;
   }
@@ -1848,6 +1853,73 @@ function selectTagForDocSearch(tag) {
   input.focus();
 }
 
+/**
+ * Compares story codes like "1.1", "1.10", "2.4" numerically segment by
+ * segment, rather than as plain strings — a plain string sort would
+ * incorrectly place "1.10" before "1.2".
+ */
+function compareStoryCodes(a, b) {
+  const pa = (a || "").split(".").map(n => parseInt(n, 10) || 0);
+  const pb = (b || "").split(".").map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+/**
+ * Groups documents by their story (folder numbering, e.g. 1.1, 1.2, 1.3),
+ * sorted numerically. Documents with no recognized story fall into a
+ * trailing "Not linked to a specific story" group instead of being
+ * silently dropped.
+ */
+function renderGroupedDocuments(docs) {
+  const groups = {};
+  const unlinked = [];
+  docs.forEach(d => {
+    if (d.storyCode) {
+      (groups[d.storyCode] = groups[d.storyCode] || []).push(d);
+    } else {
+      unlinked.push(d);
+    }
+  });
+  const codes = Object.keys(groups).sort(compareStoryCodes);
+
+  if (!codes.length && !unlinked.length) {
+    return `<div class="results-empty">No documents match.</div>`;
+  }
+
+  const groupHtml = (code, title, list) => `
+    <details class="doc-group">
+      <summary class="doc-group-header">
+        <span class="doc-group-toggle-icon">▸</span>
+        ${code ? `<span class="doc-group-code">${escapeHtml(code)}</span>` : ""}
+        <span class="doc-group-title">${escapeHtml(title)}</span>
+        <span class="doc-group-count">${list.length} document${list.length === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="doc-group-body">${list.map(d => docRowHtml(d)).join("")}</div>
+    </details>`;
+
+  let html = `<div class="doc-group-toolbar">
+      <button type="button" class="doc-group-toggle-all" onclick="setAllDocGroups(true)">Expand all</button>
+      <button type="button" class="doc-group-toggle-all" onclick="setAllDocGroups(false)">Collapse all</button>
+    </div>`;
+
+  codes.forEach(code => {
+    const story = STORIES.find(s => s.code === code);
+    html += groupHtml(code, story ? story.title : "", groups[code]);
+  });
+  if (unlinked.length) {
+    html += groupHtml(null, "Not linked to a specific story", unlinked);
+  }
+  return html;
+}
+
+function setAllDocGroups(open) {
+  document.querySelectorAll("#docCatalog .doc-group").forEach(d => { d.open = open; });
+}
+
 function renderDocumentsPage() {
   const root = document.getElementById("docCatalog");
   if (!root) return;
@@ -1876,11 +1948,23 @@ function renderDocumentsPage() {
     }
 
     const pillar = pillarSelect ? pillarSelect.value : "All";
-    let list = isConfirmedTagSearch
-      ? filterByExactTag(confirmedTag, { pillar, typeFilter: "document" })
-      : (q ? searchAll(q, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar));
-    list.sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || ""));
-    root.innerHTML = list.length ? list.map(d => docRowHtml(d)).join("") : `<div class="results-empty">No documents match.</div>`;
+    const searchTerm = isConfirmedTagSearch ? confirmedTag : q;
+
+    if (searchTerm) {
+      // Actively searching — a flat, relevance-sorted list is more useful
+      // here than grouped/collapsed sections.
+      let list = isConfirmedTagSearch
+        ? filterByExactTag(confirmedTag, { pillar, typeFilter: "document" })
+        : searchAll(searchTerm, { pillar, typeFilter: "document" });
+      list.sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || ""));
+      root.innerHTML = list.length ? list.map(d => docRowHtml(d)).join("") : `<div class="results-empty">No documents match.</div>`;
+      return;
+    }
+
+    // Default browsing view: grouped by story (folder numbering), sorted
+    // numerically, collapsed by default.
+    const list = getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
+    root.innerHTML = renderGroupedDocuments(list);
   }
 
   if (searchBox) searchBox.addEventListener("input", draw);
@@ -1906,7 +1990,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable"></span>';
+    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
