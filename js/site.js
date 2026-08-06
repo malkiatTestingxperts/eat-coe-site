@@ -1579,6 +1579,25 @@ function searchAll(query, { pillar = "All", typeFilter = "All" } = {}) {
   return scored.map(r => r.item);
 }
 
+/**
+ * Filters strictly to items that actually have `tagName` as one of their
+ * real tags — an exact match, not a substring search. This is what a
+ * confirmed tag selection (clicking a #tag suggestion, or typing #tagname
+ * and pressing Enter) should use instead of searchAll()'s broad keyword
+ * matching, which would otherwise also match any unrelated text that
+ * happens to contain those letters (e.g. searching the tag "hs" matching
+ * the word "pa-THS" or "walkthrou-GHS" purely by coincidence).
+ */
+function filterByExactTag(tagName, { pillar = "All", typeFilter = "All" } = {}) {
+  const target = (tagName || "").trim().toLowerCase();
+  const pool = [...getStoriesWithStatus(), ...getAllDocuments()];
+  return pool.filter(item => {
+    if (pillar !== "All" && item.pillarCode !== pillar) return false;
+    if (typeFilter !== "All" && item.type !== typeFilter) return false;
+    return (item.tags || []).some(t => (t || "").trim().toLowerCase() === target);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadStoredTags(); // fire-and-forget — fast, same-origin fetch; ready well before anyone types "#"
   loadSharedTags(); // fire-and-forget — cross-user tags from SharePoint, merges in once loaded
@@ -1710,8 +1729,9 @@ function runHeroSearch() {
     return;
   }
 
-  const searchTerm = isConfirmedTagSearch ? confirmedTag : q;
-  const list = searchAll(searchTerm, { pillar: activePillar });
+  const list = isConfirmedTagSearch
+    ? filterByExactTag(confirmedTag, { pillar: activePillar })
+    : searchAll(q, { pillar: activePillar });
   box.classList.add("show");
   if (list.length === 0) {
     box.innerHTML = `<div class="results-empty">No results. Try a different pillar or keyword.</div>`;
@@ -1729,7 +1749,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">: “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">“${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -1856,8 +1876,9 @@ function renderDocumentsPage() {
     }
 
     const pillar = pillarSelect ? pillarSelect.value : "All";
-    const searchTerm = isConfirmedTagSearch ? confirmedTag : q;
-    let list = searchTerm ? searchAll(searchTerm, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
+    let list = isConfirmedTagSearch
+      ? filterByExactTag(confirmedTag, { pillar, typeFilter: "document" })
+      : (q ? searchAll(q, { pillar, typeFilter: "document" }) : getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar));
     list.sort((a, b) => (b.lastModifiedDate || "").localeCompare(a.lastModifiedDate || ""));
     root.innerHTML = list.length ? list.map(d => docRowHtml(d)).join("") : `<div class="results-empty">No documents match.</div>`;
   }
