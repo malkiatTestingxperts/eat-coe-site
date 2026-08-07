@@ -2116,8 +2116,10 @@ function renderStoryDocSections() {
     container.innerHTML = `
       <details class="doc-group" data-group-key="${escapeHtml(groupKey)}" ${openDocGroups.has(groupKey) ? "open" : ""}>
         <summary class="doc-group-header">
-          <span class="doc-group-toggle-icon">▸</span>
-          <span class="doc-group-title">Documents for this deliverable</span>
+        
+<span class="doc-group-toggle-icon" style="font-size:30px; font-weight:600; color:#29c5d6; margin-right:1px;">▸</span>
+<span class="doc-group-title">Documents for this deliverable</span>
+
           <span class="doc-group-count">${docs.length} document${docs.length === 1 ? "" : "s"}</span>
         </summary>
         <div class="doc-group-body">
