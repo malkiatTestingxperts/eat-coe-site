@@ -1281,7 +1281,7 @@ function initRegisterForm() {
     if (tags.length) setDocTagsOverride(name, tags);
 
     fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
-      (status === "ok" ? " · " : "");
+      (status === "ok" ? " ·" : "");
   });
 
   function buildEmailContent() {
@@ -1754,7 +1754,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">“${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match"> “${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -1881,19 +1881,28 @@ function compareStoryCodes(a, b) {
 // after someone opens it.
 let openDocGroups = new Set();
 
-function renderGroupedDocuments(docs) {
-  const groups = {};
+function renderGroupedDocuments(docs, pillarFilter) {
+  pillarFilter = pillarFilter || "All";
+  const docsByStory = {};
   const unlinked = [];
   docs.forEach(d => {
     if (d.storyCode) {
-      (groups[d.storyCode] = groups[d.storyCode] || []).push(d);
+      (docsByStory[d.storyCode] = docsByStory[d.storyCode] || []).push(d);
     } else {
       unlinked.push(d);
     }
   });
-  const codes = Object.keys(groups).sort(compareStoryCodes);
 
-  if (!codes.length && !unlinked.length) {
+  // Every story in the pillar (or all pillars), in linear numeric order —
+  // not just the ones that happen to already have a document — so a story
+  // with nothing linked yet still shows up with a clear "No documents
+  // exist" placeholder instead of silently disappearing from the list.
+  const stories = STORIES
+    .filter(s => pillarFilter === "All" || s.pillarCode === pillarFilter)
+    .slice()
+    .sort((a, b) => compareStoryCodes(a.code, b.code));
+
+  if (!stories.length && !unlinked.length) {
     return `<div class="results-empty">No documents match.</div>`;
   }
 
@@ -1903,9 +1912,9 @@ function renderGroupedDocuments(docs) {
         <span class="doc-group-toggle-icon">▸</span>
         ${code ? `<span class="doc-group-code">${escapeHtml(code)}</span>` : ""}
         <span class="doc-group-title">${escapeHtml(title)}</span>
-        <span class="doc-group-count">${list.length} document${list.length === 1 ? "" : "s"}</span>
+        <span class="doc-group-count">${list.length ? list.length + " document" + (list.length === 1 ? "" : "s") : "No documents"}</span>
       </summary>
-      <div class="doc-group-body">${list.map(d => docRowHtml(d)).join("")}</div>
+      <div class="doc-group-body">${list.length ? list.map(d => docRowHtml(d)).join("") : `<div class="ql-empty">No documents exist.</div>`}</div>
     </details>`;
 
   let html = `<div class="doc-group-toolbar">
@@ -1913,9 +1922,8 @@ function renderGroupedDocuments(docs) {
       <button type="button" class="doc-group-toggle-all" onclick="setAllDocGroups(false)">Collapse all</button>
     </div>`;
 
-  codes.forEach(code => {
-    const story = STORIES.find(s => s.code === code);
-    html += groupHtml(code, story ? story.title : "", groups[code]);
+  stories.forEach(story => {
+    html += groupHtml(story.code, story.title, docsByStory[story.code] || []);
   });
   if (unlinked.length) {
     html += groupHtml(null, "Not linked to a specific story", unlinked);
@@ -1987,7 +1995,7 @@ function renderDocumentsPage() {
     // Default browsing view: grouped by story (folder numbering), sorted
     // numerically, collapsed by default.
     const list = getAllDocuments().filter(d => pillar === "All" || d.pillarCode === pillar);
-    root.innerHTML = renderGroupedDocuments(list);
+    root.innerHTML = renderGroupedDocuments(list, pillar);
   }
 
   if (searchBox) searchBox.addEventListener("input", draw);
@@ -2104,13 +2112,22 @@ function renderStoryDocSections() {
     }
 
     const docs = getDocsForStory(code);
+    const groupKey = "pillar-page-" + code;
     container.innerHTML = `
-      <h4>Documents for this deliverable</h4>
-      ${docs.length ? docs.map(docRowHtml).join("") : `<div class="ql-empty">No documents linked yet.</div>`}
-      <a class="doc-link" href="${registerHref}" style="margin-top:10px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Register a document for this deliverable
-      </a>`;
+      <details class="doc-group" data-group-key="${escapeHtml(groupKey)}" ${openDocGroups.has(groupKey) ? "open" : ""}>
+        <summary class="doc-group-header">
+          <span class="doc-group-toggle-icon">▸</span>
+          <span class="doc-group-title">Documents for this deliverable</span>
+          <span class="doc-group-count">${docs.length} document${docs.length === 1 ? "" : "s"}</span>
+        </summary>
+        <div class="doc-group-body">
+          ${docs.length ? docs.map(docRowHtml).join("") : `<div class="ql-empty">No documents exist.</div>`}
+          <a class="doc-link" href="${registerHref}" style="margin-top:10px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Register a document for this deliverable
+          </a>
+        </div>
+      </details>`;
   });
 }
 
