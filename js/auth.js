@@ -173,8 +173,8 @@ async function signOut() {
 // Until both are filled in, everyone defaults to Viewer (the safer option),
 // so this can be deployed before the group IDs are known without
 // accidentally granting Moderator access to everyone.
-const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // EAT-COE-Site Portal Moderators
-const VIEWER_GROUP_ID = "2bd2212e-40c9-4306-a96a-273648c6436d";//"9220b96b-9ed3-4fcc-b1cf-064752309e98"; // EAT-COE-Site Portal Viewers
+const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // TREAT-COE-Site Portal Moderators
+const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98"; // TREAT-COE-Site Portal Viewers
 
 /**
  * Reads real group membership from the signed-in account's ID token. This
