@@ -308,6 +308,7 @@ async function listAllSharePointFiles(driveId, rootItemId) {
     const subfolderWalks = [];
     for (const child of children) {
       if (!child.folder) {
+        if (child.name === SHARED_TAGS_FILE_NAME) continue; // internal data file, not a real document
         results.push(mapDriveItemToDoc(child, driveId, pillarCode, storyName));
         continue;
       }
@@ -608,5 +609,97 @@ async function sendDocumentEmail({ toAddress, subject, bodyText, file }) {
   }
 
   return { attachmentSkipped };
+}
+
+/* ---------------- shared, cross-user tag storage ---------------- */
+
+// A small JSON file kept in the same SharePoint folder as the documents
+// themselves — this is what actually makes tags visible to everyone on the
+// team, not just the person who typed them, without needing a separate
+// database or backend. Named with a leading underscore so it reads clearly
+// as internal/app data, not a real document.
+const SHARED_TAGS_FILE_NAME = "_treat-coe-shared-tags.json";
+
+/**
+ * Token acquisition for saving shared tags — isolated from every other
+ * scope in this app, the same pattern used for Mail.Send. Reading the
+ * shared tags file only ever needs the existing Sites.Read.All scope
+ * (already granted, works for everyone today); only WRITING a new tag
+ * needs this separate Files.ReadWrite.All scope, which needs one more
+ * admin consent step before it works. Like Mail.Send, this deliberately
+ * allows a fresh interactive attempt every time (not just once) since
+ * saving a tag is always a direct result of someone clicking Add Tag.
+ */
+async function getSharedTagsWriteToken() {
+  if (typeof msalInstance === "undefined" || !msalInstance) throw new Error("MSAL is not initialized (SSO not configured).");
+  if (typeof msalReady !== "undefined") await msalReady;
+  const account = (typeof getActiveAccount === "function") ? getActiveAccount() : null;
+  if (!account) throw new Error("Not signed in.");
+  // Files.ReadWrite.All (not Sites.ReadWrite.All) — this is deliberately
+  // narrower in spirit: it only grants write access to drives/items the
+  // signed-in person already has real access to, rather than broad
+  // tenant-wide SharePoint write access. Note this is a DIFFERENT
+  // permission from the plain Files.Read/Files.ReadWrite tried earlier in
+  // this project (those are limited to files opened via a picker and
+  // can't resolve a SharePoint site at all) — resolving the folder here
+  // still uses the existing, already-working Sites.Read.All; this scope
+  // is only used for the actual write call below, on an already-resolved
+  // drive/item.
+  const request = { scopes: ["Files.ReadWrite.All"], account };
+  try {
+    const result = await msalInstance.acquireTokenSilent(request);
+    return result.accessToken;
+  } catch (silentError) {
+    console.warn("Silent token acquisition for saving a shared tag failed — trying an interactive prompt. This is a direct result of clicking Add Tag, so a popup here is expected.", silentError);
+    const result = await msalInstance.acquireTokenPopup(request);
+    return result.accessToken;
+  }
+}
+
+/**
+ * Reads the shared tags file from SharePoint. Uses the same read-only
+ * access every signed-in user already has — no special permission needed
+ * just to see tags others have added. Returns {} (not an error) if the
+ * file doesn't exist yet — that just means nobody has saved a shared tag
+ * yet, not a real failure.
+ */
+async function fetchSharedTagsFile() {
+  const folder = await resolveSharePointFolder();
+  try {
+    const res = await graphFetch(`/drives/${folder.driveId}/items/${folder.itemId}:/${encodeURIComponent(SHARED_TAGS_FILE_NAME)}:/content`);
+    return await res.json();
+  } catch (e) {
+    return {}; // most likely: file doesn't exist yet
+  }
+}
+
+/**
+ * Saves one document's tags into the shared tags file — a read-modify-write:
+ * fetch the current shared file, update just this one entry, write the
+ * whole file back. For a small, low-traffic internal tool this is an
+ * acceptable tradeoff; two people saving different tags at the exact same
+ * moment could rarely overwrite one another, but that's a narrow edge case
+ * worth accepting rather than building a much more complex system for.
+ */
+async function saveSharedTag(key, tags) {
+  const folder = await resolveSharePointFolder();
+  let current = {};
+  try { current = await fetchSharedTagsFile(); } catch (e) { current = {}; }
+  current[key] = { tags, updatedAt: new Date().toISOString() };
+
+  const token = await getSharedTagsWriteToken();
+  const res = await fetch(
+    `${GRAPH_BASE}/drives/${folder.driveId}/items/${folder.itemId}:/${encodeURIComponent(SHARED_TAGS_FILE_NAME)}:/content`,
+    {
+      method: "PUT",
+      headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+      body: JSON.stringify(current)
+    }
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Graph request failed (${res.status} ${res.statusText}): ${text.slice(0, 300)}`);
+  }
+  return current;
 }
 
