@@ -622,13 +622,14 @@ const SHARED_TAGS_FILE_NAME = "_treat-coe-shared-tags.json";
 
 /**
  * Token acquisition for saving shared tags — isolated from every other
- * scope in this app, the same pattern used for Mail.Send. Reading the
- * shared tags file only ever needs the existing Sites.Read.All scope
- * (already granted, works for everyone today); only WRITING a new tag
- * needs this separate Files.ReadWrite.All scope, which needs one more
- * admin consent step before it works. Like Mail.Send, this deliberately
- * allows a fresh interactive attempt every time (not just once) since
- * saving a tag is always a direct result of someone clicking Add Tag.
+ * scope in this app. Reading the shared tags file only ever needs the
+ * existing Sites.Read.All scope (already granted, works for everyone
+ * today); only WRITING a new tag needs this separate Files.ReadWrite
+ * scope (as granted by IT — see the note below on this being a narrower
+ * permission than originally requested). This is silent-only — no popup
+ * — since an unapproved/insufficient permission can't be resolved by an
+ * interactive prompt anyway; it just fails quietly and falls back to a
+ * local-only save.
  */
 async function getSharedTagsWriteToken() {
   if (typeof msalInstance === "undefined" || !msalInstance) throw new Error("MSAL is not initialized (SSO not configured).");
@@ -645,15 +646,28 @@ async function getSharedTagsWriteToken() {
   // still uses the existing, already-working Sites.Read.All; this scope
   // is only used for the actual write call below, on an already-resolved
   // drive/item.
-  const request = { scopes: ["Files.ReadWrite.All"], account };
-  try {
-    const result = await msalInstance.acquireTokenSilent(request);
-    return result.accessToken;
-  } catch (silentError) {
-    console.warn("Silent token acquisition for saving a shared tag failed — trying an interactive prompt. This is a direct result of clicking Add Tag, so a popup here is expected.", silentError);
-    const result = await msalInstance.acquireTokenPopup(request);
-    return result.accessToken;
-  }
+  // NOTE: Files.ReadWrite (no ".All") — narrower than Files.ReadWrite.All.
+  // This is the same low-privilege permission that couldn't resolve a
+  // SharePoint site at all earlier in this project. Resolving the folder
+  // here still goes through the already-working Sites.Read.All, so that
+  // specific failure shouldn't repeat — but Files.ReadWrite is documented
+  // by Microsoft as covering the signed-in user's own files and files
+  // they've reached through a picker/consent interaction, not blanket
+  // write access to an arbitrary SharePoint site's drive the app hasn't
+  // been introduced to that way. This may still be rejected by Graph for
+  // that reason — genuinely untested against real SharePoint; if it fails,
+  // the exact error Graph returns will tell us for certain one way or the
+  // other, rather than guessing further.
+  const request = { scopes: ["Files.ReadWrite"], account };
+  // Deliberately silent-only — no acquireTokenPopup() fallback. If this
+  // permission hasn't been admin-approved yet, an interactive prompt here
+  // shows Microsoft's own "Approval required" screen, which whoever
+  // clicked Add Tag has no way to resolve themselves (only a tenant admin
+  // can approve it) — a confusing dead end, not a useful prompt. Instead,
+  // this just fails quietly and the caller (setDocTagsOverride) falls back
+  // to saving the tag locally on this device, no popup shown at all.
+  const result = await msalInstance.acquireTokenSilent(request);
+  return result.accessToken;
 }
 
 /**
@@ -702,4 +716,3 @@ async function saveSharedTag(key, tags) {
   }
   return current;
 }
-
