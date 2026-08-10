@@ -1232,7 +1232,7 @@ function initRegisterForm() {
   const tagsInput = document.getElementById("rfTags");
 
   function currentTagsArray() {
-    return tagsInput.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+    return tagsInput.value.split(",").map(t => t.trim()).filter(Boolean);
   }
 
   // Persists whatever tags/name are currently in the form against the
@@ -1658,8 +1658,8 @@ async function loadStoredTags() {
 function getAllKnownTags() {
   // Case-insensitive dedupe: keeps the first-seen casing for display, but
   // treats "sop" and "SOP" as the same tag rather than two separate ones —
-  // this also cleans up any already-fragmented tags from before tags were
-  // normalized to lowercase at the point of adding them.
+  // even though tags are stored exactly as typed, this keeps the
+  // suggestion list from showing the same tag twice in different casing.
   const seen = new Map(); // lowercase -> original-cased display value
   STORED_TAGS.forEach(t => { if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t); });
   getAllDocuments().forEach(d => (d.tags || []).forEach(t => { if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t); }));
@@ -1765,7 +1765,7 @@ function renderResultCard(item) {
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match"> “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">: “${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -2049,7 +2049,7 @@ function docRowHtml(d) {
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens${storyLinkHtml(d)}</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">“${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
@@ -2073,25 +2073,31 @@ async function handleAddTag(id) {
   if (!rawVal) return;
   const doc = findDocById(id);
   if (!doc) return;
-  const val = rawVal.toLowerCase();
+  const val = rawVal; // preserve exactly as typed — no forced lowercasing
   const existingTags = doc.tags || [];
-  // Case-insensitive check: if this document (or the tag already typed
-  // some other case elsewhere) already effectively has this tag, don't
-  // add a second, differently-cased copy of the same thing.
-  const alreadyHasIt = existingTags.some(t => t.toLowerCase() === val);
+  // Case-insensitive check only — prevents "sop" and "SOP" existing as two
+  // separate tags on the same document, without changing the casing of
+  // whichever one was actually typed.
+  const alreadyHasIt = existingTags.some(t => t.toLowerCase() === val.toLowerCase());
   const tags = alreadyHasIt ? existingTags : [...existingTags, val];
   input.value = "";
+  // The local save inside updateDocTags happens synchronously before any
+  // network call — calling it here (without awaiting) and refreshing
+  // right away shows the new tag instantly, instead of waiting on the
+  // slower SharePoint sync to finish first. The sync itself still runs,
+  // just in the background.
+  const syncPromise = updateDocTags(doc, tags);
   refreshDocViews();
-  const result = await updateDocTags(doc, tags);
-  refreshDocViews();
-  if (result && result.synced === false && result.error) {
-    console.warn('Tag "' + val + '" saved locally only — not yet visible to teammates. Ask your admin to grant Sites.ReadWrite.All for shared tags to sync across the team.');
-  }
+  syncPromise.then(result => {
+    if (result && result.synced === false && result.error) {
+      console.warn('Tag "' + val + '" saved locally only — not yet visible to teammates. Ask your admin to grant Sites.ReadWrite.All for shared tags to sync across the team.');
+    }
+  });
 }
 function handleRemoveTag(id, tag) {
   const doc = findDocById(id);
   if (!doc) return;
-  updateDocTags(doc, (doc.tags || []).filter(t => t !== tag)).then(() => refreshDocViews());
+  updateDocTags(doc, (doc.tags || []).filter(t => t !== tag));
   refreshDocViews();
 }
 function handleDeleteDoc(id) {
