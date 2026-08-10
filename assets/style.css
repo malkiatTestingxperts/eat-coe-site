@@ -1366,6 +1366,12 @@ body.login-page {
   color: #9fb0b6
 }
 
+.result-card .rc-story-tags {
+  font-size: 11.5px;
+  color: #9fb0b6;
+  margin-top: 4px !important
+}
+
 .result-card p {
   font-size: 13px;
   color: #b9c9cc;

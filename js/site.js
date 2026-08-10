@@ -1232,7 +1232,7 @@ function initRegisterForm() {
   const tagsInput = document.getElementById("rfTags");
 
   function currentTagsArray() {
-    return tagsInput.value.split(",").map(t => t.trim()).filter(Boolean);
+    return tagsInput.value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
   }
 
   // Persists whatever tags/name are currently in the form against the
@@ -1656,10 +1656,14 @@ async function loadStoredTags() {
 }
 
 function getAllKnownTags() {
-  const tagSet = new Set();
-  STORED_TAGS.forEach(t => { if (t) tagSet.add(t); });
-  getAllDocuments().forEach(d => (d.tags || []).forEach(t => { if (t) tagSet.add(t); }));
-  return [...tagSet].sort((a, b) => a.localeCompare(b));
+  // Case-insensitive dedupe: keeps the first-seen casing for display, but
+  // treats "sop" and "SOP" as the same tag rather than two separate ones —
+  // this also cleans up any already-fragmented tags from before tags were
+  // normalized to lowercase at the point of adding them.
+  const seen = new Map(); // lowercase -> original-cased display value
+  STORED_TAGS.forEach(t => { if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t); });
+  getAllDocuments().forEach(d => (d.tags || []).forEach(t => { if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t); }));
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
 function selectTagFromSuggestion(tag) {
@@ -1750,6 +1754,13 @@ function renderResultCard(item) {
   const title = isStory ? item.title : item.name;
   const meta = isStory ? `${escapeHtml(item.pillar)} · Owner: ${escapeHtml(item.owner)}` : `${escapeHtml(item.pillar || "Unlinked")} · ${escapeHtml(item.location || "SharePoint")}${storyLinkHtml(item)}`;
   const desc = isStory ? item.description : `Tags: ${(item.tags || []).join(", ") || "—"}`;
+  // Stories show their tags too now, as a separate small line — previously
+  // only documents displayed "Tags: ...", making it look like a matching
+  // story had none, when it may well have a real tag baked into its own
+  // data (like story 1.1's "sop" tag) that just wasn't shown anywhere.
+  const storyTagsHtml = (isStory && (item.tags || []).length)
+    ? `<p class="rc-story-tags">Tags: ${escapeHtml(item.tags.join(", "))}</p>`
+    : "";
   const link = isStory ? item.url : "#";
   const onclick = isStory ? "" : `onclick="openDocument(${JSON.stringify(item).replace(/"/g, '&quot;')});return false;"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
@@ -1766,6 +1777,7 @@ function renderResultCard(item) {
       </div>
       <div class="rc-meta">${meta}</div>
       <p>${escapeHtml(desc)}</p>
+      ${storyTagsHtml}
       ${snippetHtml}
     </div>`;
 }
@@ -2057,11 +2069,17 @@ function findDocById(id) { return getAllDocuments().find(d => d.id === id); }
 
 async function handleAddTag(id) {
   const input = document.getElementById("newtag-" + id);
-  const val = input.value.trim();
-  if (!val) return;
+  const rawVal = input.value.trim();
+  if (!rawVal) return;
   const doc = findDocById(id);
   if (!doc) return;
-  const tags = Array.from(new Set([...(doc.tags || []), val]));
+  const val = rawVal.toLowerCase();
+  const existingTags = doc.tags || [];
+  // Case-insensitive check: if this document (or the tag already typed
+  // some other case elsewhere) already effectively has this tag, don't
+  // add a second, differently-cased copy of the same thing.
+  const alreadyHasIt = existingTags.some(t => t.toLowerCase() === val);
+  const tags = alreadyHasIt ? existingTags : [...existingTags, val];
   input.value = "";
   refreshDocViews();
   const result = await updateDocTags(doc, tags);
@@ -2116,10 +2134,8 @@ function renderStoryDocSections() {
     container.innerHTML = `
       <details class="doc-group" data-group-key="${escapeHtml(groupKey)}" ${openDocGroups.has(groupKey) ? "open" : ""}>
         <summary class="doc-group-header">
-        
-<span class="doc-group-toggle-icon" style="font-size:30px; font-weight:600; color:#29c5d6; margin-right:1px;">▸</span>
-<span class="doc-group-title">Documents for this deliverable</span>
-
+          <span class="doc-group-toggle-icon">▸</span>
+          <span class="doc-group-title">Documents for this deliverable</span>
           <span class="doc-group-count">${docs.length} document${docs.length === 1 ? "" : "s"}</span>
         </summary>
         <div class="doc-group-body">
