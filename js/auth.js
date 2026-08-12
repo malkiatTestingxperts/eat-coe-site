@@ -63,6 +63,13 @@ function getActiveAccount() {
   return accounts.length ? accounts[0] : null;
 }
 
+// Guards against the most common real-world cause of "interaction_in_progress":
+// someone clicking Log In a second time (impatience, a slow/blocked popup,
+// a double-click) before the first attempt has resolved. MSAL only allows
+// one interactive call in flight at a time — a second overlapping call
+// fails with exactly this error, even though nothing is actually broken.
+let signInInProgress = false;
+
 async function signIn() {
   if (!SSO_ENABLED) {
     if (typeof showToast === "function") {
@@ -74,6 +81,11 @@ async function signIn() {
     return;
   }
   if (!msalInstance) return;
+  if (signInInProgress) {
+    console.warn("Sign-in already in progress — ignoring this extra click.");
+    return;
+  }
+  signInInProgress = true;
   try {
     await msalReady;
     // Request the Graph scope (Sites.Read.All) together with the basic
@@ -121,9 +133,31 @@ async function signIn() {
       hint = " MSAL's own startup step failed silently earlier — check the browser console right after the page loads for a \"MSAL initialize() failed\" message.";
     }
 
+    // A stuck "interaction in progress" flag is the one error where simply
+    // retrying won't help on its own — MSAL's own stored status can be
+    // left behind if a previous attempt was interrupted abnormally (e.g.
+    // the popup was force-closed, or the page was navigated away mid-flow)
+    // rather than resolving or rejecting cleanly. Once that happens, every
+    // subsequent attempt fails the same way until that leftover state is
+    // cleared — which is exactly the "fails, then keeps failing on retry
+    // too" pattern this handles.
+    if (errorCode === "interaction_in_progress") {
+      try {
+        Object.keys(sessionStorage)
+          .filter(k => k.indexOf("msal.interaction.status") !== -1)
+          .forEach(k => sessionStorage.removeItem(k));
+      } catch (e2) { /* ignore */ }
+      if (typeof showToast === "function") {
+        showToast("Sign-in got stuck from a previous attempt — that's now cleared. Please click Log In again.", "error");
+      }
+      return;
+    }
+
     if (typeof showToast === "function") {
       showToast("Sign-in failed (" + errorCode + "): " + errorMessage + hint, "error", 0);
     }
+  } finally {
+    signInInProgress = false;
   }
 }
 
@@ -266,14 +300,17 @@ function renderAuthUI() {
   const account = getActiveAccount();
   if (account) {
     const role = (typeof getRole === "function") ? getRole() : "viewer";
-    const roleLabel = role === "contributor" ? "Moderator" : "Viewer";
-    const roleClass = role === "contributor" ? "role-badge-moderator" : "role-badge-viewer";
-    box.innerHTML = `
-      <div class="identity-card">
-        <span class="role-badge ${roleClass}">${roleLabel}</span>
+    const isModerator = role === "contributor";
+    box.innerHTML = isModerator
+      ? `
+        <div class="identity-card">
+          <span class="role-badge role-badge-moderator">Moderator</span>
+          <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
+        </div>
+        <button class="signout-btn" onclick="signOut()">Log Out</button>`
+      : `
         <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
-      </div>
-      <button class="signout-btn" onclick="signOut()">Log Out</button>`;
+        <button class="signout-btn" onclick="signOut()">Log Out</button>`;
   } else {
     box.innerHTML = `
       <button class="signin-btn" onclick="signIn()">
