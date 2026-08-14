@@ -1091,6 +1091,7 @@ p {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 .site-header .logo img {
@@ -1104,7 +1105,9 @@ p {
   display: flex;
   flex-direction: column;
   margin-right: 5px;
-  line-height: 0.05
+  line-height: 0.05;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .site-header .logo .lt b {
@@ -1554,7 +1557,8 @@ body.login-page {
   gap: 8px;
   margin-left: 18px;
   padding-left: 18px;
-  border-left: 1px solid rgba(255, 255, 255, .12)
+  border-left: 1px solid rgba(255, 255, 255, .12);
+  flex-shrink: 0;
 }
 
 .role-switcher select,
@@ -1665,7 +1669,12 @@ body.login-page {
   background: rgba(41, 197, 214, .14);
   border: 1px solid rgba(41, 197, 214, .3);
   border-radius: 20px;
-  padding: 6px 12px
+  padding: 6px 12px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
 }
 
 /* Role Badge */
@@ -1709,7 +1718,9 @@ body.login-page {
   border-radius: 7px;
   padding: 6px 10px;
   font-size: 11.5px;
-  cursor: pointer
+  cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .signout-btn:hover {
