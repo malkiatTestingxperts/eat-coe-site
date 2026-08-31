@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
 
 const MSAL_CONFIG = {
   auth: {
