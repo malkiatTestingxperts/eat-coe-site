@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Full Sitemap · TREAT COE</title>
+  <title>Full Sitemap · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
 </head>
@@ -15,7 +15,7 @@
       <img src="assets/treat.png" alt="TREAT logo">
       <span class="lt"><i>Tx’s Repository For Enterprise Applications Testing</i></span>
     </a>
-    <button class="nav-toggle" onclick="document.querySelector('.site-nav').classList.toggle('open')">&#9776;</button>
+    <button class="nav-toggle" aria-label="Toggle navigation menu">&#9776;</button>
     <nav class="site-nav">
       <a class="nav-flat" href="index.html">Home</a>
       <div class="nav-item">
@@ -314,7 +314,7 @@
   <div id="about-modal">
     <div id="about-header">About EAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
     <div id="about-body">
-      <p><strong>TREAT</strong> is <strong>TREAT- Tx's Repository Of Enterprise Application Testing</strong>, the Center
+      <p><strong>EAT</strong> is <strong>TREAT- Tx's Repository Of Enterprise Application Testing</strong>, the Center
         of Excellence
         behind every
         ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for
@@ -337,7 +337,7 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>SCOUT</span>
+      <span>TREAT Knowledge Assistant</span>
       <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
@@ -345,11 +345,9 @@
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me Deliverable 3.6<br>
-        • Search related to Automation Tools<br>
-        • Find documents using keywords<br>
-        • Find documents by tags<br>
-        • Locate the text inside documents
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
       </div>
     </div>
     <div id="chat-footer">
@@ -359,12 +357,12 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
-  <script src="js/site.js?v=20260803115326"></script>
-  <script src="js/auth.js?v=20260803115326"></script>
-  <script src="js/graph.js?v=20260803115326"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script type="module" src="js/pdfjs-loader.mjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260831125150"></script>
+  <script src="js/auth.js?v=20260831125150"></script>
+  <script src="js/graph.js?v=20260831125150"></script>
 </body>
 
 </html>

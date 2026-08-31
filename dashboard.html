@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Readiness Dashboard · TREAT COE</title>
+  <title>Readiness Dashboard · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
 </head>
@@ -15,7 +15,7 @@
       <img src="assets/treat.png" alt="TREAT logo">
       <span class="lt"><i>Tx’s Repository For Enterprise Applications Testing</i></span>
     </a>
-    <button class="nav-toggle" onclick="document.querySelector('.site-nav').classList.toggle('open')">&#9776;</button>
+    <button class="nav-toggle" aria-label="Toggle navigation menu">&#9776;</button>
     <nav class="site-nav">
       <a class="nav-flat" href="index.html">Home</a>
       <div class="nav-item">
@@ -55,12 +55,7 @@
   </header>
   <section class="hero hero-sm">
     <span class="eyebrow">Live readiness</span>
-    <h1 style="text-align:center;">
-      TREAT Readiness Dashboard
-      <span style="color:#FFD700; font-size:18px;">
-        (⭐ Under Development)
-      </span>
-    </h1>
+    <h1>EAT Readiness Dashboard</h1>
     <p class="tagline">Rolled up from the COE backlog — 29 deliverables across 5 pillars.</p>
   </section>
   <main class="page-content">
@@ -174,18 +169,18 @@
           the only place this is tracked</span></div>
       <div class="card">
         <div class="table-scroll">
-          <table class="story-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Story</th>
-                <th>Pillar</th>
-                <th>Owner</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="storyTableBody"></tbody>
-          </table>
+        <table class="story-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Story</th>
+              <th>Pillar</th>
+              <th>Owner</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="storyTableBody"></tbody>
+        </table>
         </div>
       </div>
 
@@ -198,8 +193,7 @@
   <div id="about-modal">
     <div id="about-header">About TREAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
     <div id="about-body">
-      <p><strong>TREAT</strong> is <strong>Tx's Repository For Enterprise Application Testing</strong>, the Center of
-        Excellence behind every
+      <p><strong>EAT</strong> is <strong>Enterprise Application Testing</strong>, the Center of Excellence behind every
         ERP/CRM testing engagement. See the full <a href="about.html" style="color:var(--teal)">About page</a> for
         details.</p>
     </div>
@@ -220,7 +214,7 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>SCOUT</span>
+      <span>EAT Knowledge Assistant</span>
       <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
@@ -228,11 +222,9 @@
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me Deliverable 3.6<br>
-        • Search related to Automation Tools<br>
-        • Find documents using keywords<br>
-        • Find documents by tags<br>
-        • Locate the text inside documents
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
       </div>
     </div>
     <div id="chat-footer">
@@ -242,12 +234,12 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
-  <script src="js/site.js?v=20260803115326"></script>
-  <script src="js/auth.js?v=20260803115326"></script>
-  <script src="js/graph.js?v=20260803115326"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script type="module" src="js/pdfjs-loader.mjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260831125150"></script>
+  <script src="js/auth.js?v=20260831125150"></script>
+  <script src="js/graph.js?v=20260831125150"></script>
 </body>
 
 </html>

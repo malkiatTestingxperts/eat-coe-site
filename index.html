@@ -202,7 +202,7 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>SCOUT</span>
+      <span>TREAT Knowledge Assistant</span>
       <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
@@ -210,11 +210,9 @@
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me Deliverable 3.6<br>
-        • Search related to Automation Tools<br>
-        • Find documents using keywords<br>
-        • Find documents by tags<br>
-        • Locate the text inside documents
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
       </div>
     </div>
     <div id="chat-footer">
@@ -224,12 +222,12 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
-  <script src="js/site.js?v=20260803115326"></script>
-  <script src="js/auth.js?v=20260803115326"></script>
-  <script src="js/graph.js?v=20260803115326"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script type="module" src="js/pdfjs-loader.mjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260831125150"></script>
+  <script src="js/auth.js?v=20260831125150"></script>
+  <script src="js/graph.js?v=20260831125150"></script>
 </body>
 
 </html>

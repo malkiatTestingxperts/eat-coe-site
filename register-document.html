@@ -64,8 +64,8 @@
 
       <div class="callout" style="margin-top:0">
         <h4>How this works</h4>
-        <p>Fill in the details below, click <b>Choose file</b> to attach it from your computer, then hit <b> Send</b> —
-          the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
+        <p>Fill in the details below, click <b>📎 Choose file</b> to attach it from your computer, then hit <b>📧
+          Send</b> — the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
           account), with the file genuinely attached. No mail app opens, and there's nothing further to do — the COE
           team receives it and files it into the right SharePoint folder based on the pillar/labels you chose.
           (Files over 3MB can't be attached automatically — you'll be told if that happens, so you can share it
@@ -89,8 +89,7 @@
             </div>
             <div class="reg-field">
               <label>Description <span class="reg-optional">(optional)</span></label>
-              <textarea id="rfDescription" rows="3"
-                placeholder="What is this document and why does it belong in the repository?"></textarea>
+              <textarea id="rfDescription" rows="3" placeholder="What is this document and why does it belong in the repository?"></textarea>
             </div>
             <div class="reg-field-row">
               <div class="reg-field">
@@ -106,27 +105,22 @@
               </div>
               <div class="reg-field">
                 <label>Related story <span class="reg-optional">(optional)</span></label>
-                <select id="rfStory">
-                  <option value="">No specific story</option>
-                </select>
+                <select id="rfStory"><option value="">No specific story</option></select>
               </div>
             </div>
             <div class="reg-field">
-              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right
-                  folder)</span></label>
+              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right folder)</span></label>
               <input type="text" id="rfTags" placeholder="e.g. automation, regression, checklist">
             </div>
             <div class="reg-field">
               <label>Attach a file</label>
               <div class="reg-file-row">
-                <label class="signin-btn reg-attach-btn" for="rfFile"
-                  style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
+                <label class="signin-btn reg-attach-btn" for="rfFile" style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
                 <input type="file" id="rfFile" style="display:none">
                 <span id="rfFileName" class="reg-filename"></span>
-                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn"
-                  style="background:var(--teal);color:#fff">Send</button>
+                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn" style="background:var(--teal);color:#fff">📧 Send</button>
               </div>
-              <p class="uf-note" style="margin-top:10px"></p>
+              <p class="uf-note" style="margin-top:10px">Sending emails it immediately as you — no mail app opens, and the file you attach is sent along with it for real.</p>
             </div>
           </form>
         </div>
@@ -164,7 +158,7 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>SCOUT</span>
+      <span>EAT Knowledge Assistant</span>
       <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
@@ -172,11 +166,9 @@
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me Deliverable 3.6<br>
-        • Search related to Automation Tools<br>
-        • Find documents using keywords<br>
-        • Find documents by tags<br>
-        • Locate the text inside documents
+        • Show me deliverable 3.6<br>
+        • What's done in Standards?<br>
+        • Automation framework
       </div>
     </div>
     <div id="chat-footer">
@@ -186,12 +178,12 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3/build/pdf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1/mammoth.browser.min.js"></script>
-  <script src="js/site.js?v=20260803115326"></script>
-  <script src="js/auth.js?v=20260803115326"></script>
-  <script src="js/graph.js?v=20260803115326"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script type="module" src="js/pdfjs-loader.mjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260831125150"></script>
+  <script src="js/auth.js?v=20260831125150"></script>
+  <script src="js/graph.js?v=20260831125150"></script>
 </body>
 
 </html>

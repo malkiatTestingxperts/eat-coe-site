@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TREAT COE — Microsoft SSO sign-in (MSAL.js)
+   EAT COE — Microsoft SSO sign-in (MSAL.js)
    Sign-in ONLY. No Graph document/permission calls happen here — this just
    proves who the visitor is (their real Microsoft work identity) and feeds
    their real display name into the rest of the site (activity log, tags,
@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -154,7 +154,13 @@ async function signIn() {
     }
 
     if (typeof showToast === "function") {
-      showToast("Sign-in failed (" + errorCode + "): " + errorMessage + hint, "error", 0);
+      // User-facing message is deliberately generic — no raw error code or
+      // internal error string shown here, only the already-friendly,
+      // actionable hint (which never contains raw technical detail). The
+      // full technical error is still fully available via
+      // console.error(...) just above, for anyone who actually needs to
+      // debug it.
+      showToast("Sign-in failed." + (hint || " Please try again, or contact your admin if this keeps happening."), "error", 0);
     }
   } finally {
     signInInProgress = false;
@@ -207,8 +213,8 @@ async function signOut() {
 // Until both are filled in, everyone defaults to Viewer (the safer option),
 // so this can be deployed before the group IDs are known without
 // accidentally granting Moderator access to everyone.
-const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // TREAT-COE-Site Portal Moderators
-const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98"; // TREAT-COE-Site Portal Viewers
+const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // EAT-COE-Site Portal Moderators
+const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98"; // EAT-COE-Site Portal Viewers
 
 /**
  * Reads real group membership from the signed-in account's ID token. This
