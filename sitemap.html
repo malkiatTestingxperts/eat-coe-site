@@ -4,6 +4,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Hidden until auth.js confirms it's safe to show (signed in, or
+       sign-in not required) — minimizes/eliminates the brief flash of
+       real content that could otherwise render before a redirect fires
+       for an unauthenticated visitor. Restored via revealPage() in
+       js/auth.js. -->
+  <style>html{visibility:hidden}</style>
   <title>Full Sitemap · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
@@ -360,9 +366,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260831125150"></script>
-  <script src="js/auth.js?v=20260831125150"></script>
-  <script src="js/graph.js?v=20260831125150"></script>
+  <script src="js/site.js?v=20260901173007"></script>
+  <script src="js/auth.js?v=20260901173007"></script>
+  <script src="js/graph.js?v=20260901173007"></script>
 </body>
 
 </html>

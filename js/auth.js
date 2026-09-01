@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -289,8 +289,18 @@ function onSignedIn(account) {
 function onSignedOut() {
   if (typeof setUserName === "function") setUserName("Guest");
   if (typeof setRole === "function") setRole("viewer");
-  if (REQUIRE_SIGNIN && !isLoginPage()) document.body.classList.add("signin-required");
+  if (REQUIRE_SIGNIN && !isLoginPage()) {
+    // Navigate away immediately rather than just visually hiding content
+    // in place. The previous approach (a CSS blur over the existing page)
+    // left the real content fully intact in the DOM underneath — visible
+    // via DevTools or by simply removing the blur style, not a genuine
+    // removal. A real navigation discards the entire page/DOM state,
+    // so nothing from the authenticated session remains reachable at all.
+    window.location.href = "login.html";
+    return;
+  }
   renderAuthUI();
+  revealPage();
 }
 
 function escapeHtmlAuth(str) {
@@ -397,11 +407,24 @@ function initInactivityTracking() {
   setInterval(checkSessionTimeout, 60 * 1000); // check once a minute
 }
 
+/**
+ * Un-hides the page body — paired with an inline `<style>html{visibility:
+ * hidden}</style>` placed as early as possible in each protected page's
+ * <head>. The page stays invisible until this explicitly runs, which only
+ * happens once we've confirmed it's actually safe to show (signed in, or
+ * sign-in isn't required at all) — minimizing/eliminating the brief flash
+ * of real content that could otherwise render before the redirect fires.
+ */
+function revealPage() {
+  document.documentElement.style.visibility = "visible";
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (isMsalPopup()) return;
 
   if (!SSO_ENABLED) {
     renderAuthUI();
+    revealPage();
     return;
   }
   try {
@@ -418,13 +441,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     // bookmark) — no need to show it, go straight to Home.
     if (isLoginPage()) {
       window.location.href = "index.html";
+    } else {
+      revealPage();
     }
   } else {
+    // onSignedOut() now handles the redirect to login.html itself when
+    // REQUIRE_SIGNIN is on — no separate redirect needed here.
     onSignedOut();
-    // Not signed in and this isn't the login page itself — send them there
-    // instead of showing a blurred/gated version of the real page.
-    if (REQUIRE_SIGNIN && !isLoginPage()) {
-      window.location.href = "login.html";
-    }
   }
 });
