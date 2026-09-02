@@ -450,3 +450,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     onSignedOut();
   }
 });
+
+/**
+ * Closes the browser back-button gap: when navigating away from a page,
+ * browsers can snapshot the entire page (DOM, JS state, everything) in
+ * memory and instantly restore it on Back/Forward -- without re-running
+ * any JavaScript, including the DOMContentLoaded auth check above. That
+ * means pressing Back after logout could show the old, fully-intact
+ * signed-in page straight from that snapshot, bypassing every check on
+ * this page entirely.
+ *
+ * The "pageshow" event fires whenever a page becomes visible, including
+ * this exact restoration -- and event.persisted is true specifically when
+ * it came from that cache rather than a fresh load. Forcing a reload in
+ * that case guarantees the real auth check runs again from scratch: if
+ * the person is still genuinely signed in, the reload is instant and
+ * unnoticeable; if they're not, they're correctly redirected to login
+ * instead of seeing the stale cached page.
+ */
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
