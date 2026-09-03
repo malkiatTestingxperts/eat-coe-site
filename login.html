@@ -10,7 +10,8 @@
        here. Those three genuinely require a hosting platform capable of
        setting response headers; this covers what's actually achievable
        from a static file alone. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Partial mitigation for Clickjacking (Finding 2.1/2.5) — a classic
        frame-busting check: if this page is ever loaded inside another
@@ -66,20 +67,13 @@
 
   <section class="hero login-hero">
     <div class="login-card">
-      <img src="assets/treat.png" alt="TREAT logo" class="login-logo">
-      <h1>To view the repo, please Login</h1>
-      <p class="tagline">Sign in with your Microsoft work account to access the TREAT Center of Excellence
-        repository — standards, tools, monitoring, capability and innovation content, all in one place.</p>
-      <button class="signin-btn login-signin-btn" onclick="signIn()">
-        <svg viewBox="0 0 23 23">
-          <rect width="10" height="10" x="1" y="1" fill="#f25022" />
-          <rect width="10" height="10" x="12" y="1" fill="#7fba00" />
-          <rect width="10" height="10" x="1" y="12" fill="#00a4ef" />
-          <rect width="10" height="10" x="12" y="12" fill="#ffb900" />
-        </svg>
-        Log In with Microsoft
+      <!-- <img src="assets/treat.png" alt="TREAT logo" class="login-logo"> -->
+      <h2 class="login-heading">To View The Repository, Please Log In</h2>
+      <button class="signin-btn login-signin-btn" onclick="signIn()"
+        style="background-color: #167D8A; color: #FFFFFF; border: none; padding: 13px 26px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+        Sign In
       </button>
-      <p class="sso-note login-note">Having trouble signing in? Contact your COE admin.</p>
+      <p class="sso-note login-note"> <b> Having trouble signing in? Contact your TREAT admin. </b> </p>
     </div>
   </section>
 
@@ -90,7 +84,9 @@
     </div>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
+    integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+    crossorigin="anonymous"></script>
   <script src="js/site.js?v=20260903155857"></script>
   <script src="js/auth.js?v=20260903155857"></script>
   <script src="js/graph.js?v=20260903155857"></script>
