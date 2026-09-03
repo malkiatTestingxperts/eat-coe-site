@@ -1291,8 +1291,7 @@ function initRegisterForm() {
     });
     if (tags.length) setDocTagsOverride(name, tags);
 
-    fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)" +
-      (status === "ok" ? " · 🔍 indexed for search" : "");
+    fileNameLabel.textContent = "📎 " + file.name + " (" + Math.round(file.size / 1024) + " KB)";
   });
 
   function buildEmailContent() {
@@ -1710,7 +1709,7 @@ function renderTagSuggestionsHtml(query, onSelectFnName) {
   return `
     <div class="tag-suggest-hint">Browsing tags — click one to search by it</div>
     <div class="tag-suggest-list">
-      ${matches.map(t => `<button type="button" class="tag-suggest-pill" onclick='${onSelectFnName}(${JSON.stringify(t)})'>#${escapeHtml(t)}</button>`).join("")}
+      ${matches.map(t => `<button type="button" class="tag-suggest-pill" data-tag-suggest="1" data-select-fn="${escapeHtml(onSelectFnName)}" data-tag-value="${escapeHtml(t)}">#${escapeHtml(t)}</button>`).join("")}
     </div>`;
 }
 
@@ -1775,7 +1774,7 @@ function renderResultCard(item) {
   const docAttrs = isStory ? "" : `data-doc-action="open" data-doc-id="${escapeHtml(item.id)}"`;
   const statusChip = isStory ? `<span class="chip ${item.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(item.status)}</span>` : "";
   const snippetHtml = item._snippet
-    ? `<p class="body-match">🔍 Matched inside the document: “${escapeHtml(item._snippet)}”</p>`
+    ? `<p class="body-match">“${escapeHtml(item._snippet)}”</p>`
     : "";
   return `
     <div class="result-card">
@@ -2045,7 +2044,7 @@ function docRowHtml(d) {
   const isPending = d.sourceType === "pending";
   let indexBadge = "";
   if (d.fullText) {
-    indexBadge = '<span class="type-badge story" title="Every line of this document is searchable">🔍 full-text indexed</span>';
+    indexBadge = '';
   } else if ((d.sourceType === "user" || isPending) && d.fullTextStatus === "unsupported") {
     indexBadge = '<span class="sso-note">(full-text search not available for this file type)</span>';
   }
@@ -2061,7 +2060,7 @@ function docRowHtml(d) {
         <div class="dr-name">📄 ${escapeHtml(d.name)} ${(d.tags || []).some(t => t.toLowerCase() === "featured") ? '<span class="type-badge document">featured</span>' : ""}${pendingTag} ${indexBadge}</div>
         <div class="dr-meta">${escapeHtml(d.pillar || "Unlinked")} · Uploaded by ${escapeHtml(d.uploadedBy)} on ${d.uploadDate} · Last modified by ${escapeHtml(d.lastModifiedBy)} on ${d.lastModifiedDate} · ${d.downloads} opens${storyLinkHtml(d)}</div>
         <div class="dr-tags" id="tags-${d.id}">${renderTagPills(d)}</div>
-        ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
+        ${d._snippet ? `<p class="body-match" style="margin-top:8px">“${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
           <button type="button" data-add-tag="1" data-doc-id="${escapeHtml(d.id)}">Add tag</button>
@@ -2173,7 +2172,19 @@ document.addEventListener("click", (e) => {
     return;
   }
 
-  const el = e.target.closest("[data-doc-action]");
+  const tagSuggestEl = e.target.closest("[data-tag-suggest]");
+  if (tagSuggestEl) {
+    e.preventDefault();
+    // Deliberately only allow the two known, legitimate function names
+    // this can ever contain — not an arbitrary window[...] call on
+    // whatever string happens to be in the attribute.
+    const allowedFns = { selectTagFromSuggestion, selectTagForDocSearch };
+    const fn = allowedFns[tagSuggestEl.dataset.selectFn];
+    if (fn) fn(tagSuggestEl.dataset.tagValue);
+    return;
+  }
+
+
   if (!el) return;
   const doc = findDocById(el.dataset.docId);
   if (!doc) return;
@@ -2415,7 +2426,7 @@ function answerFromKnowledgeBase(keyword) {
       : escapeHtml(title); // unsafe URL scheme — show as plain text, never as a clickable link
     html += `<li>${isStory ? "📁" : "📄"} ${linkHtml} <span style="color:#5B6B7A">(${item.type})</span>`;
     if (item._snippet) {
-      html += `<br><span style="color:#5B6B7A;font-size:11.5px">🔍 “${escapeHtml(item._snippet)}”</span>`;
+      html += `<br><span style="color:#5B6B7A;font-size:11.5px">“${escapeHtml(item._snippet)}”</span>`;
     }
     html += `</li>`;
   });
