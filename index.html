@@ -3,6 +3,53 @@
 
 <head>
   <meta charset="utf-8">
+  <!-- Partial mitigation for "Missing Security Headers" — the directives
+       below ARE honored when delivered via <meta>, unlike X-Frame-Options,
+       X-Content-Type-Options, and CSP's frame-ancestors directive, which
+       browsers only honor from a real HTTP header and silently ignore
+       here. Those three genuinely require a hosting platform capable of
+       setting response headers; this covers what's actually achievable
+       from a static file alone. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <!-- Partial mitigation for Clickjacking (Finding 2.1/2.5) — a classic
+       frame-busting check: if this page is ever loaded inside another
+       site's iframe, break out of it immediately. This defeats their
+       exact demonstrated PoC. It's a pre-CSP-era technique though, not a
+       complete substitute for the real fix — the CSP frame-ancestors /
+       X-Frame-Options header, which (like the headers noted above) can
+       only be delivered by a hosting platform capable of setting real
+       HTTP response headers, not by any static-file-only technique. -->
+  <script>
+    // Modern browsers (Chrome/Firefox/Safari) now block automatic
+    // cross-origin frame-to-parent navigation as an anti-abuse measure,
+    // similar to a popup blocker -- confirmed by direct testing here, so
+    // the classic "break out of the frame" trick alone is not reliable
+    // anymore. What still works without needing that permission: if this
+    // page detects it's framed, immediately blank its own content --
+    // their PoC specifically relies on the real page being visible
+    // (at reduced opacity) inside their frame for the illusion to work;
+    // with nothing rendered, there's nothing left to trick someone into
+    // clicking. The real, complete fix is still the CSP frame-ancestors /
+    // X-Frame-Options header noted above -- this is a partial, static-
+    // file-only mitigation, not a substitute for it.
+    if (window.top !== window.self) {
+      document.documentElement.innerHTML =
+        '<body style="font-family:sans-serif;padding:60px;text-align:center;color:#333">' +
+        '<h2>This page cannot be displayed in a frame.</h2>' +
+        '<p>For your security, please open it directly instead:</p>' +
+        '<a href="' + window.self.location.href + '" target="_top">' + window.self.location.href + '</a>' +
+        '</body>';
+      try { window.top.location = window.self.location; } catch (e) { /* ignore -- likely blocked by the browser */ }
+      // window.stop() halts the parser immediately -- without this, the
+      // browser keeps parsing and running the rest of the original page's
+      // scripts (auth.js, site.js) right after this point, which would
+      // otherwise silently re-populate the real content moments later and
+      // undo the blanking above entirely. Confirmed this exact failure
+      // mode by testing without it first.
+      window.stop();
+    }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Hidden until auth.js confirms it's safe to show (signed in, or
        sign-in not required) — minimizes/eliminates the brief flash of
@@ -231,9 +278,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260901173007"></script>
-  <script src="js/auth.js?v=20260901173007"></script>
-  <script src="js/graph.js?v=20260901173007"></script>
+  <script src="js/site.js?v=20260903155857"></script>
+  <script src="js/auth.js?v=20260903155857"></script>
+  <script src="js/graph.js?v=20260903155857"></script>
 </body>
 
 </html>

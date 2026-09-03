@@ -20,7 +20,7 @@
 // MSAL's popup flow just briefly loads this URL to capture the auth
 // response, then closes the popup automatically; it's independent of which
 // page in the app the person actually clicked "Log In" from.
-const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site";
+const REGISTERED_REDIRECT_URI = "https://malkiattestingxperts.github.io/eat-coe-site/";
 
 const MSAL_CONFIG = {
   auth: {
@@ -213,6 +213,28 @@ async function signOut() {
 // Until both are filled in, everyone defaults to Viewer (the safer option),
 // so this can be deployed before the group IDs are known without
 // accidentally granting Moderator access to everyone.
+//
+// SECURITY NOTE (re: vulnerability assessment Finding 2.6 — "Exposure of
+// Internal Configuration Information, Group Identifiers, and Tenant
+// Metadata"): the two Object IDs below, along with the Client ID and
+// Tenant ID elsewhere in this file, are INTENTIONALLY public. None of
+// them function as secrets:
+//   - Client ID / Tenant ID are required, public-by-design values for any
+//     browser-based Microsoft Entra ID sign-in flow to work at all (true
+//     of every application built on MSAL.js, not specific to this one).
+//   - A Group Object ID does not grant membership in that group, nor any
+//     permission derived from it. Entra ID enforces access based on a
+//     signed-in person's REAL group membership, entirely independent of
+//     whether the group's ID itself is publicly visible.
+// This application never treats these values as an authorization
+// boundary on their own — role assignment (see determineRoleFromGroups()
+// below) only ever reads group membership from a cryptographically
+// signed, server-verified ID token, never from these constants directly.
+// No client secret exists anywhere in this application, in source
+// control, or at runtime — this app is registered in Entra ID as a
+// Single-Page Application (a "public client"), a type Microsoft's
+// platform deliberately never issues a secret to, since one embedded in
+// browser-delivered code could never actually be kept confidential.
 const MODERATOR_GROUP_ID = "6a773ce8-d3f3-4ab1-9129-608524cbb9e9"; // EAT-COE-Site Portal Moderators
 const VIEWER_GROUP_ID = "9220b96b-9ed3-4fcc-b1cf-064752309e98"; // EAT-COE-Site Portal Viewers
 
