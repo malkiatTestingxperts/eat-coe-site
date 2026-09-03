@@ -345,13 +345,13 @@ function renderAuthUI() {
           <span class="role-badge role-badge-moderator">Moderator</span>
           <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
         </div>
-        <button class="signout-btn" onclick="signOut()">Log Out</button>`
+        <button class="signout-btn" data-sign-out="1">Log Out</button>`
       : `
         <span class="signed-in-name">👤 ${escapeHtmlAuth(account.name || account.username)}</span>
-        <button class="signout-btn" onclick="signOut()">Log Out</button>`;
+        <button class="signout-btn" data-sign-out="1">Log Out</button>`;
   } else {
     box.innerHTML = `
-      <button class="signin-btn" onclick="signIn()">
+      <button class="signin-btn" data-sign-in="1">
         Log In
       </button>${SSO_ENABLED ? "" : '<span class="sso-note">(setup pending)</span>'}`;
   }

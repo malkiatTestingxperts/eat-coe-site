@@ -20,36 +20,7 @@
        X-Frame-Options header, which (like the headers noted above) can
        only be delivered by a hosting platform capable of setting real
        HTTP response headers, not by any static-file-only technique. -->
-  <script>
-    // Modern browsers (Chrome/Firefox/Safari) now block automatic
-    // cross-origin frame-to-parent navigation as an anti-abuse measure,
-    // similar to a popup blocker -- confirmed by direct testing here, so
-    // the classic "break out of the frame" trick alone is not reliable
-    // anymore. What still works without needing that permission: if this
-    // page detects it's framed, immediately blank its own content --
-    // their PoC specifically relies on the real page being visible
-    // (at reduced opacity) inside their frame for the illusion to work;
-    // with nothing rendered, there's nothing left to trick someone into
-    // clicking. The real, complete fix is still the CSP frame-ancestors /
-    // X-Frame-Options header noted above -- this is a partial, static-
-    // file-only mitigation, not a substitute for it.
-    if (window.top !== window.self) {
-      document.documentElement.innerHTML =
-        '<body style="font-family:sans-serif;padding:60px;text-align:center;color:#333">' +
-        '<h2>This page cannot be displayed in a frame.</h2>' +
-        '<p>For your security, please open it directly instead:</p>' +
-        '<a href="' + window.self.location.href + '" target="_top">' + window.self.location.href + '</a>' +
-        '</body>';
-      try { window.top.location = window.self.location; } catch (e) { /* ignore -- likely blocked by the browser */ }
-      // window.stop() halts the parser immediately -- without this, the
-      // browser keeps parsing and running the rest of the original page's
-      // scripts (auth.js, site.js) right after this point, which would
-      // otherwise silently re-populate the real content moments later and
-      // undo the blanking above entirely. Confirmed this exact failure
-      // mode by testing without it first.
-      window.stop();
-    }
-  </script>
+  <script src="js/anti-clickjacking.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Hidden until auth.js confirms it's safe to show (signed in, or
        sign-in not required) — minimizes/eliminates the brief flash of
@@ -124,12 +95,12 @@
     <div class="filters">
       <h3>Filter by pillar</h3>
       <div class="filter-pills" id="filterPills">
-        <button class="active" onclick="filterPillar('All', this)">All</button>
-        <button onclick="filterPillar('01', this)">01 · Standards</button>
-        <button onclick="filterPillar('02', this)">02 · Tools</button>
-        <button onclick="filterPillar('03', this)">03 · Monitoring</button>
-        <button onclick="filterPillar('04', this)">04 · Capability</button>
-        <button onclick="filterPillar('05', this)">05 · Innovation</button>
+        <button class="active" data-filter-pillar="All">All</button>
+        <button data-filter-pillar="01">01 · Standards</button>
+        <button data-filter-pillar="02">02 · Tools</button>
+        <button data-filter-pillar="03">03 · Monitoring</button>
+        <button data-filter-pillar="04">04 · Capability</button>
+        <button data-filter-pillar="05">05 · Innovation</button>
       </div>
     </div>
     <!-- <div class="tech-landscape">
@@ -229,9 +200,9 @@
     </div>
 
   </footer>
-  <div id="about-overlay" onclick="toggleAbout()"></div>
+  <div id="about-overlay" data-toggle-about="1"></div>
   <div id="about-modal">
-    <div id="about-header">About TREAT<span id="about-close" onclick="toggleAbout()">&times;</span></div>
+    <div id="about-header">About TREAT<span id="about-close" data-toggle-about="1">&times;</span></div>
     <div id="about-body">
       <p><strong>EAT</strong> is <strong>TX's Enterprise Application Testing</strong>, the Center of Excellence behind
         every
@@ -243,7 +214,7 @@
   <!-- ============================= -->
   <!-- AI Knowledge Assistant -->
   <!-- ============================= -->
-  <div id="chatbot-button" onclick="toggleChatbot()"><svg viewBox="0 0 24 24" fill="none" stroke="white"
+  <div id="chatbot-button" data-toggle-chatbot="1"><svg viewBox="0 0 24 24" fill="none" stroke="white"
       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <rect x="4" y="8" width="16" height="12" rx="3" />
       <circle cx="9" cy="14" r="1.1" fill="white" stroke="none" />
@@ -256,7 +227,7 @@
   <div id="chatbot-window">
     <div id="chat-header">
       <span>TREAT Knowledge Assistant</span>
-      <span class="close" onclick="toggleChatbot()">&times;</span>
+      <span class="close" data-toggle-chatbot="1">&times;</span>
     </div>
     <div id="chat-body">
       <div class="bot-message">
@@ -270,17 +241,17 @@
     </div>
     <div id="chat-footer">
       <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        onkeypress="if(event.key==='Enter'){sendMessage();}">
-      <button onclick="sendMessage()">Send</button>
+        data-enter-sends="1">
+      <button data-send-message="1">Send</button>
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260903155857"></script>
-  <script src="js/auth.js?v=20260903155857"></script>
-  <script src="js/graph.js?v=20260903155857"></script>
+  <script src="js/site.js?v=20260903161803"></script>
+  <script src="js/auth.js?v=20260903161803"></script>
+  <script src="js/graph.js?v=20260903161803"></script>
 </body>
 
 </html>

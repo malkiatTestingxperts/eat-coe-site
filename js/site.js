@@ -1940,8 +1940,8 @@ function renderGroupedDocuments(docs, pillarFilter) {
     </details>`;
 
   let html = `<div class="doc-group-toolbar">
-      <button type="button" class="doc-group-toggle-all" onclick="setAllDocGroups(true)">Expand all</button>
-      <button type="button" class="doc-group-toggle-all" onclick="setAllDocGroups(false)">Collapse all</button>
+      <button type="button" class="doc-group-toggle-all" data-groups-toggle="expand">Expand all</button>
+      <button type="button" class="doc-group-toggle-all" data-groups-toggle="collapse">Collapse all</button>
     </div>`;
 
   stories.forEach(story => {
@@ -2054,7 +2054,7 @@ function docRowHtml(d) {
     ? `<span class="sso-note">Fill out and send the form above to submit this ↑</span>`
     : `<button data-doc-action="download" data-doc-id="${escapeHtml(d.id)}">⬇ Download</button>
        <button data-doc-action="open" data-doc-id="${escapeHtml(d.id)}">↗ View</button>
-       ${canManage ? `<button class="danger contributor-only" onclick="handleDeleteDoc('${d.id}')">Remove</button>` : ""}`;
+       ${canManage ? `<button class="danger contributor-only" data-delete-doc="1" data-doc-id="${escapeHtml(d.id)}">Remove</button>` : ""}`;
   return `
     <div class="doc-row" data-doc-id="${d.id}">
       <div class="dr-main">
@@ -2064,7 +2064,7 @@ function docRowHtml(d) {
         ${d._snippet ? `<p class="body-match" style="margin-top:8px">🔍 Matched inside the document: “${escapeHtml(d._snippet)}”</p>` : ""}
         <div class="contributor-only tag-add-form">
           <input type="text" placeholder="add tag…" id="newtag-${d.id}">
-          <button type="button" onclick="handleAddTag('${d.id}')">Add tag</button>
+          <button type="button" data-add-tag="1" data-doc-id="${escapeHtml(d.id)}">Add tag</button>
         </div>
       </div>
       <div class="dr-actions">
@@ -2114,6 +2114,65 @@ document.addEventListener("click", (e) => {
     handleRemoveTag(removeTagEl.dataset.docId, removeTagEl.dataset.tagValue);
     return;
   }
+
+  const addTagEl = e.target.closest("[data-add-tag]");
+  if (addTagEl) {
+    e.preventDefault();
+    handleAddTag(addTagEl.dataset.docId);
+    return;
+  }
+
+  const deleteEl = e.target.closest("[data-delete-doc]");
+  if (deleteEl) {
+    e.preventDefault();
+    handleDeleteDoc(deleteEl.dataset.docId);
+    return;
+  }
+
+  const groupToggleEl = e.target.closest("[data-groups-toggle]");
+  if (groupToggleEl) {
+    e.preventDefault();
+    setAllDocGroups(groupToggleEl.dataset.groupsToggle === "expand");
+    return;
+  }
+
+  const pillarEl = e.target.closest("[data-filter-pillar]");
+  if (pillarEl) {
+    e.preventDefault();
+    filterPillar(pillarEl.dataset.filterPillar, pillarEl);
+    return;
+  }
+
+  if (e.target.closest("[data-send-message]")) {
+    e.preventDefault();
+    sendMessage();
+    return;
+  }
+
+  if (e.target.closest("[data-sign-in]")) {
+    e.preventDefault();
+    signIn();
+    return;
+  }
+
+  if (e.target.closest("[data-sign-out]")) {
+    e.preventDefault();
+    signOut();
+    return;
+  }
+
+  if (e.target.closest("[data-toggle-about]")) {
+    e.preventDefault();
+    toggleAbout();
+    return;
+  }
+
+  if (e.target.closest("[data-toggle-chatbot]")) {
+    e.preventDefault();
+    toggleChatbot();
+    return;
+  }
+
   const el = e.target.closest("[data-doc-action]");
   if (!el) return;
   const doc = findDocById(el.dataset.docId);
@@ -2122,6 +2181,23 @@ document.addEventListener("click", (e) => {
   const action = el.dataset.docAction;
   if (action === "open") openDocument(doc);
   else if (action === "download") downloadDocument(doc);
+});
+
+// Same delegation approach for the one remaining keyboard-triggered
+// handler (Enter key sends a chat message) -- was previously an inline
+// onkeypress="" attribute, blocked under the same CSP restriction as
+// onclick.
+document.addEventListener("keypress", (e) => {
+  if (e.key === "Enter" && e.target.closest("[data-enter-sends]")) {
+    sendMessage();
+  }
+});
+
+document.addEventListener("change", (e) => {
+  const statusEl = e.target.closest("[data-status-select]");
+  if (statusEl) {
+    handleStatusChange(statusEl.dataset.storyCode, statusEl.value);
+  }
 });
 
 async function handleAddTag(id) {
@@ -2275,7 +2351,7 @@ function renderStoryTable() {
       <td>${escapeHtml(s.owner)}</td>
       <td>
         <span class="viewer-only-status chip ${s.status.toLowerCase().replace(/\s+/g, '')}">${escapeHtml(s.status)}</span>
-        <select class="contributor-only" style="display:none" onchange="handleStatusChange('${s.code}', this.value)">
+        <select class="contributor-only" style="display:none" data-status-select="1" data-story-code="${escapeHtml(s.code)}">
           ${statuses.map(st => `<option value="${st}" ${st === s.status ? "selected" : ""}>${st}</option>`).join("")}
         </select>
       </td>
