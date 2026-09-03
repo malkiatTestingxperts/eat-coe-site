@@ -10,7 +10,8 @@
        here. Those three genuinely require a hosting platform capable of
        setting response headers; this covers what's actually achievable
        from a static file alone. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Partial mitigation for Clickjacking (Finding 2.1/2.5) — a classic
        frame-busting check: if this page is ever loaded inside another
@@ -27,7 +28,11 @@
        real content that could otherwise render before a redirect fires
        for an unauthenticated visitor. Restored via revealPage() in
        js/auth.js. -->
-  <style>html{visibility:hidden}</style>
+  <style>
+    html {
+      visibility: hidden
+    }
+  </style>
   <title>Readiness Dashboard · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
@@ -79,7 +84,12 @@
   </header>
   <section class="hero hero-sm">
     <span class="eyebrow">Live readiness</span>
-    <h1>EAT Readiness Dashboard</h1>
+    <h1 style="text-align:center;">
+      EAT Readiness Dashboard
+      <span style="color:#FFD700; font-size:18px;">
+        (⭐ Under Development)
+      </span>
+    </h1>
     <p class="tagline">Rolled up from the COE backlog — 29 deliverables across 5 pillars.</p>
   </section>
   <main class="page-content">
@@ -193,18 +203,18 @@
           the only place this is tracked</span></div>
       <div class="card">
         <div class="table-scroll">
-        <table class="story-table">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Story</th>
-              <th>Pillar</th>
-              <th>Owner</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="storyTableBody"></tbody>
-        </table>
+          <table class="story-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Story</th>
+                <th>Pillar</th>
+                <th>Owner</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="storyTableBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -252,15 +262,18 @@
       </div>
     </div>
     <div id="chat-footer">
-      <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        data-enter-sends="1">
+      <input id="chat-input" type="text" placeholder="Ask about the COE repository…" data-enter-sends="1">
       <button data-send-message="1">Send</button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
+    integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+    crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
+    integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
+    crossorigin="anonymous"></script>
   <script src="js/site.js?v=20260903161803"></script>
   <script src="js/auth.js?v=20260903161803"></script>
   <script src="js/graph.js?v=20260903161803"></script>
