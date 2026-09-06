@@ -10,7 +10,8 @@
        here. Those three genuinely require a hosting platform capable of
        setting response headers; this covers what's actually achievable
        from a static file alone. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Partial mitigation for Clickjacking (Finding 2.1/2.5) — a classic
        frame-busting check: if this page is ever loaded inside another
@@ -27,7 +28,11 @@
        real content that could otherwise render before a redirect fires
        for an unauthenticated visitor. Restored via revealPage() in
        js/auth.js. -->
-  <style>html{visibility:hidden}</style>
+  <style>
+    html {
+      visibility: hidden
+    }
+  </style>
   <title>About EAT · EAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
@@ -86,7 +91,7 @@
     <div class="wrap">
 
       <div class="prose">
-        <p><strong>What EAT is.</strong> EAT is a Center of Excellence body, not a project team. It sits above
+        <p><strong>What TREAT is.</strong> TREAT is a Center of Excellence body, not a project team. It sits above
           individual ERP/CRM testing engagements and owns the standards, tools, monitoring practices, capability
           programs and innovation pilots that every engagement draws on. Its output is a living repository: strategy
           documents, SOPs, templates, trackers and playbooks organized under five pillars, each broken into a discrete,
@@ -151,32 +156,38 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>EAT Knowledge Assistant</span>
-      <span class="close" data-toggle-chatbot="1">&times;</span>
+      <span>SCOUT</span>
+      <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
       <div class="bot-message">
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me deliverable 3.6<br>
-        • What's done in Standards?<br>
-        • Automation framework
+        • Show me Deliverable 3.6<br>
+        • Search related to Automation Tools<br>
+        • Find documents using keywords<br>
+        • Find documents by tags<br>
+        • Locate the text inside documents
       </div>
     </div>
     <div id="chat-footer">
       <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        data-enter-sends="1">
-      <button data-send-message="1">Send</button>
+        onkeypress="if(event.key==='Enter'){sendMessage();}">
+      <button onclick="sendMessage()">Send</button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
+    integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+    crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260903161803"></script>
-  <script src="js/auth.js?v=20260903161803"></script>
-  <script src="js/graph.js?v=20260903161803"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
+    integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
+    crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260906085710"></script>
+  <script src="js/auth.js?v=20260906085710"></script>
+  <script src="js/graph.js?v=20260906085710"></script>
 </body>
 
 </html>

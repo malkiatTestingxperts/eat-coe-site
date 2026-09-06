@@ -10,7 +10,8 @@
        here. Those three genuinely require a hosting platform capable of
        setting response headers; this covers what's actually achievable
        from a static file alone. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com;">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Partial mitigation for Clickjacking (Finding 2.1/2.5) — a classic
        frame-busting check: if this page is ever loaded inside another
@@ -27,7 +28,11 @@
        real content that could otherwise render before a redirect fires
        for an unauthenticated visitor. Restored via revealPage() in
        js/auth.js. -->
-  <style>html{visibility:hidden}</style>
+  <style>
+    html {
+      visibility: hidden
+    }
+  </style>
   <title>Register a Document · TREAT COE</title>
   <link rel="stylesheet" href="assets/style.css">
 
@@ -89,7 +94,7 @@
       <div class="callout" style="margin-top:0">
         <h4>How this works</h4>
         <p>Fill in the details below, click <b>📎 Choose file</b> to attach it from your computer, then hit <b>📧
-          Send</b> — the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
+            Send</b> — the email is sent immediately, straight from this page, as you (via your signed-in Microsoft
           account), with the file genuinely attached. No mail app opens, and there's nothing further to do — the COE
           team receives it and files it into the right SharePoint folder based on the pillar/labels you chose.
           (Files over 3MB can't be attached automatically — you'll be told if that happens, so you can share it
@@ -113,7 +118,8 @@
             </div>
             <div class="reg-field">
               <label>Description <span class="reg-optional">(optional)</span></label>
-              <textarea id="rfDescription" rows="3" placeholder="What is this document and why does it belong in the repository?"></textarea>
+              <textarea id="rfDescription" rows="3"
+                placeholder="What is this document and why does it belong in the repository?"></textarea>
             </div>
             <div class="reg-field-row">
               <div class="reg-field">
@@ -129,22 +135,28 @@
               </div>
               <div class="reg-field">
                 <label>Related story <span class="reg-optional">(optional)</span></label>
-                <select id="rfStory"><option value="">No specific story</option></select>
+                <select id="rfStory">
+                  <option value="">No specific story</option>
+                </select>
               </div>
             </div>
             <div class="reg-field">
-              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right folder)</span></label>
+              <label>Labels / tags <span class="reg-optional">(comma separated — used to route it to the right
+                  folder)</span></label>
               <input type="text" id="rfTags" placeholder="e.g. automation, regression, checklist">
             </div>
             <div class="reg-field">
               <label>Attach a file</label>
               <div class="reg-file-row">
-                <label class="signin-btn reg-attach-btn" for="rfFile" style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
+                <label class="signin-btn reg-attach-btn" for="rfFile"
+                  style="background:#fff;color:var(--ink);border:1px solid var(--border)">📎 Choose file</label>
                 <input type="file" id="rfFile" style="display:none">
                 <span id="rfFileName" class="reg-filename"></span>
-                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn" style="background:var(--teal);color:#fff">📧 Send</button>
+                <button type="button" id="rfSendBtn" class="signin-btn reg-send-btn"
+                  style="background:var(--teal);color:#fff">📧 Send</button>
               </div>
-              <p class="uf-note" style="margin-top:10px">Sending emails it immediately as you — no mail app opens, and the file you attach is sent along with it for real.</p>
+              <p class="uf-note" style="margin-top:10px">Sending emails it immediately as you — no mail app opens, and
+                the file you attach is sent along with it for real.</p>
             </div>
           </form>
         </div>
@@ -182,32 +194,38 @@
     </svg></div>
   <div id="chatbot-window">
     <div id="chat-header">
-      <span>EAT Knowledge Assistant</span>
-      <span class="close" data-toggle-chatbot="1">&times;</span>
+      <span>SCOUT</span>
+      <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
     <div id="chat-body">
       <div class="bot-message">
         <strong>👋 Welcome!</strong><br><br>
         I can search both COE deliverables and linked documents.
         Ask me things like:<br><br>
-        • Show me deliverable 3.6<br>
-        • What's done in Standards?<br>
-        • Automation framework
+        • Show me Deliverable 3.6<br>
+        • Search related to Automation Tools<br>
+        • Find documents using keywords<br>
+        • Find documents by tags<br>
+        • Locate the text inside documents
       </div>
     </div>
     <div id="chat-footer">
       <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        data-enter-sends="1">
-      <button data-send-message="1">Send</button>
+        onkeypress="if(event.key==='Enter'){sendMessage();}">
+      <button onclick="sendMessage()">Send</button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js" integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
+    integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+    crossorigin="anonymous"></script>
   <script type="module" src="js/pdfjs-loader.mjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js" integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w" crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260903161803"></script>
-  <script src="js/auth.js?v=20260903161803"></script>
-  <script src="js/graph.js?v=20260903161803"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
+    integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
+    crossorigin="anonymous"></script>
+  <script src="js/site.js?v=20260906085710"></script>
+  <script src="js/auth.js?v=20260906085710"></script>
+  <script src="js/graph.js?v=20260906085710"></script>
 </body>
 
 </html>
