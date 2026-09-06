@@ -368,35 +368,39 @@
       <span>SCOUT</span>
       <span class="close" onclick="toggleChatbot()">&times;</span>
     </div>
-    <div id="chat-body">
-      <div class="bot-message">
-        <strong>👋 Welcome!</strong><br><br>
-        I can search both COE deliverables and linked documents.
-        Ask me things like:<br><br>
-        • Show me Deliverable 3.6<br>
-        • Search related to Automation Tools<br>
-        • Find documents using keywords<br>
-        • Find documents by tags<br>
-        • Locate the text inside documents
+    <div id="chatbot-window">
+      <div id="chat-header">
+        <span>SCOUT</span>
+        <span class="close" data-toggle-chatbot="1">&times;</span>
+      </div>
+      <div id="chat-body">
+        <div class="bot-message">
+          <strong>👋 Welcome!</strong><br><br>
+          I can search both COE deliverables and linked documents.
+          Ask me things like:<br><br>
+          • Show me Deliverable 3.6<br>
+          • Search related to Automation Tools<br>
+          • Find documents using keywords<br>
+          • Find documents by tags<br>
+          • Locate the text inside documents
+        </div>
+      </div>
+      <div id="chat-footer">
+        <input id="chat-input" type="text" placeholder="Ask about the COE repository…" data-enter-sends="1">
+        <button data-send-message="1">Send</button>
       </div>
     </div>
-    <div id="chat-footer">
-      <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        onkeypress="if(event.key==='Enter'){sendMessage();}">
-      <button onclick="sendMessage()">Send</button>
-    </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
-    integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
-    crossorigin="anonymous"></script>
-  <script type="module" src="js/pdfjs-loader.mjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
-    integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
-    crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260906085710"></script>
-  <script src="js/auth.js?v=20260906085710"></script>
-  <script src="js/graph.js?v=20260906085710"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
+      integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+      crossorigin="anonymous"></script>
+    <script type="module" src="js/pdfjs-loader.mjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
+      integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
+      crossorigin="anonymous"></script>
+    <script src="js/site.js?v=20260906091658"></script>
+    <script src="js/auth.js?v=20260906091658"></script>
+    <script src="js/graph.js?v=20260906091658"></script>
 </body>
 
 </html>

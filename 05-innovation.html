@@ -274,7 +274,7 @@
   <div id="chatbot-window">
     <div id="chat-header">
       <span>SCOUT</span>
-      <span class="close" onclick="toggleChatbot()">&times;</span>
+      <span class="close" data-toggle-chatbot="1">&times;</span>
     </div>
     <div id="chat-body">
       <div class="bot-message">
@@ -289,11 +289,11 @@
       </div>
     </div>
     <div id="chat-footer">
-      <input id="chat-input" type="text" placeholder="Ask about the COE repository…"
-        onkeypress="if(event.key==='Enter'){sendMessage();}">
-      <button onclick="sendMessage()">Send</button>
+      <input id="chat-input" type="text" placeholder="Ask about the COE repository…" data-enter-sends="1">
+      <button data-send-message="1">Send</button>
     </div>
   </div>
+
 
   <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.30.0/lib/msal-browser.min.js"
     integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
@@ -302,9 +302,9 @@
   <script src="https://cdn.jsdelivr.net/npm/mammoth@1.12.1/mammoth.browser.min.js"
     integrity="sha384-HDD+X9TzmVU2HzA3VYqphTtip2QgcmmSAuKTMkFv709AUMZ6LPn0ysDRZeQIL31w"
     crossorigin="anonymous"></script>
-  <script src="js/site.js?v=20260906085710"></script>
-  <script src="js/auth.js?v=20260906085710"></script>
-  <script src="js/graph.js?v=20260906085710"></script>
+  <script src="js/site.js?v=20260906091658"></script>
+  <script src="js/auth.js?v=20260906091658"></script>
+  <script src="js/graph.js?v=20260906091658"></script>
 </body>
 
 </html>
